@@ -1,0 +1,1183 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mintly — Daily Auto-Tokenization Agent on Mantle</title>
+<meta name="description" content="매일 09:00 UTC, AI 에이전트가 그 날의 핫 자산을 자동으로 토큰화한다. On-chain RWA factory on Mantle." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          display: ['Space Grotesk', 'Inter', 'sans-serif'],
+          sans: ['Inter', 'sans-serif'],
+          mono: ['JetBrains Mono', 'monospace'],
+        },
+        colors: {
+          ink: '#06060c',
+          card: '#0e0e18',
+          panel: '#13131f',
+          line: '#22223a',
+          neon: '#7cffb2',
+          hot: '#ff3d8b',
+          cyber: '#5ed3ff',
+          gold: '#ffc857',
+          mute: '#7a7a92',
+        },
+      },
+    },
+  };
+</script>
+<style>
+  html, body { background: #06060c; }
+  body {
+    color: #e8e8f1;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  .grid-bg {
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(124, 255, 178, 0.08), transparent 40%),
+      radial-gradient(circle at 80% 10%, rgba(255, 61, 139, 0.10), transparent 40%),
+      radial-gradient(circle at 50% 100%, rgba(94, 211, 255, 0.06), transparent 50%),
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: auto, auto, auto, 48px 48px, 48px 48px;
+  }
+  .neon-text {
+    text-shadow: 0 0 20px rgba(124, 255, 178, 0.4), 0 0 40px rgba(124, 255, 178, 0.2);
+  }
+  .hot-text {
+    text-shadow: 0 0 20px rgba(255, 61, 139, 0.5), 0 0 40px rgba(255, 61, 139, 0.2);
+  }
+  .scrollbar::-webkit-scrollbar { width: 6px; }
+  .scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar::-webkit-scrollbar-thumb { background: #2a2a3f; border-radius: 3px; }
+  .scrollbar::-webkit-scrollbar-thumb:hover { background: #3a3a55; }
+
+  @keyframes live-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(0.92); }
+  }
+  .live-dot {
+    animation: live-pulse 1.4s ease-in-out infinite;
+    box-shadow: 0 0 12px currentColor;
+  }
+  @keyframes float-y {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+  .float-y { animation: float-y 3s ease-in-out infinite; }
+
+  @keyframes shine {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .shine {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+    background-size: 200% 100%;
+    animation: shine 2.4s linear infinite;
+  }
+  @keyframes glow-border {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(124,255,178,0.3), 0 0 24px rgba(124,255,178,0.18); }
+    50%      { box-shadow: 0 0 0 1px rgba(124,255,178,0.6), 0 0 36px rgba(124,255,178,0.35); }
+  }
+  .glow-neon { animation: glow-border 2.4s ease-in-out infinite; }
+  @keyframes glow-hot {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(255,61,139,0.35), 0 0 24px rgba(255,61,139,0.22); }
+    50%      { box-shadow: 0 0 0 1px rgba(255,61,139,0.7),  0 0 40px rgba(255,61,139,0.45); }
+  }
+  .glow-hot { animation: glow-hot 2s ease-in-out infinite; }
+
+  .card {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)) ,
+      #0e0e18;
+    border: 1px solid #22223a;
+    border-radius: 18px;
+    transition: transform .25s ease, border-color .25s ease;
+  }
+  .card:hover { transform: translateY(-2px); border-color: #34345a; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px; font-size: 11px;
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .chip-neon { background: rgba(124,255,178,0.10); color: #7cffb2; border: 1px solid rgba(124,255,178,0.35); }
+  .chip-hot  { background: rgba(255,61,139,0.10); color: #ff7eb2; border: 1px solid rgba(255,61,139,0.4);  }
+  .chip-cyber{ background: rgba(94,211,255,0.10); color: #8edfff; border: 1px solid rgba(94,211,255,0.4);  }
+  .chip-gold { background: rgba(255,200,87,0.10); color: #ffd884; border: 1px solid rgba(255,200,87,0.4);  }
+  .chip-mute { background: rgba(255,255,255,0.04); color: #aaaac0; border: 1px solid #2a2a3f; }
+
+  .num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+  .display { font-family: 'Space Grotesk', sans-serif; }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #7cffb2 0%, #5ed3ff 100%);
+    color: #06060c; font-weight: 700;
+    padding: 14px 22px; border-radius: 12px;
+    box-shadow: 0 0 0 1px rgba(124,255,178,0.5), 0 8px 30px rgba(124,255,178,0.25);
+    transition: transform .15s ease, box-shadow .25s ease;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(124,255,178,0.85), 0 12px 40px rgba(124,255,178,0.45); }
+
+  .btn-ghost {
+    background: rgba(255,255,255,0.03); color: #e8e8f1;
+    border: 1px solid #2a2a3f; padding: 10px 16px; border-radius: 10px;
+    transition: border-color .2s ease, background .2s ease;
+  }
+  .btn-ghost:hover { border-color: #4a4a70; background: rgba(255,255,255,0.06); }
+
+  .marquee {
+    overflow: hidden; white-space: nowrap; mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .marquee-track { display: inline-flex; gap: 56px; animation: marquee 38s linear infinite; }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  .feed-item { animation: feed-enter .35s ease-out; }
+  @keyframes feed-enter {
+    from { transform: translateY(-6px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+
+  .ticker {
+    background: #0c0c14; border-bottom: 1px solid #1a1a2a;
+  }
+
+  .gradient-text-1 {
+    background: linear-gradient(135deg, #7cffb2 0%, #5ed3ff 50%, #ff3d8b 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .gradient-text-2 {
+    background: linear-gradient(135deg, #ff3d8b 0%, #ffc857 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  .price-up   { color: #7cffb2; }
+  .price-down { color: #ff5d6c; }
+
+  .leverage-3x {
+    background: linear-gradient(135deg, #ff3d8b 0%, #ff8a3d 100%);
+    color: #0a0a0f; font-weight: 800; letter-spacing: 0.05em;
+  }
+
+  .skeleton-bar {
+    background: linear-gradient(90deg, #1a1a2a, #2a2a40, #1a1a2a);
+    background-size: 200% 100%;
+    animation: shine 1.6s linear infinite;
+  }
+
+  .countdown-cell {
+    background: linear-gradient(180deg, #14142a, #0a0a14);
+    border: 1px solid #2a2a4a;
+    border-radius: 14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 12px 40px rgba(124,255,178,0.06);
+  }
+
+  .spark { stroke: #7cffb2; stroke-width: 1.6; fill: none; filter: drop-shadow(0 0 6px rgba(124,255,178,0.6)); }
+  .spark-down { stroke: #ff5d6c; filter: drop-shadow(0 0 6px rgba(255,93,108,0.5)); }
+
+  .agent-avatar {
+    width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px;
+    color: #06060c;
+  }
+
+  .progress {
+    height: 6px; background: #1a1a2a; border-radius: 999px; overflow: hidden;
+  }
+  .progress > div { height: 100%; border-radius: 999px; }
+</style>
+</head>
+<body class="grid-bg min-h-screen">
+
+<!-- Top ticker -->
+<div class="ticker text-[11px] num text-mute py-2">
+  <div class="marquee">
+    <div class="marquee-track">
+      <span><span class="text-neon">●</span>  MANTLE TESTNET LIVE</span>
+      <span>NEXT MINT WINDOW · 09:00 UTC · 18:00 KST</span>
+      <span>TODAY'S DROPS · <span class="text-neon">4 AGENTS</span> · <span class="text-hot">3 IN 3X</span></span>
+      <span>30D PROTOCOL TVL · $1,247,920</span>
+      <span>ERC-8004 AGENTS REGISTERED · 12 (TESTNET)</span>
+      <span>EVERY DECISION ON-CHAIN · ZERO REVISIONISM</span>
+      <span><span class="text-neon">●</span>  MANTLE TESTNET LIVE</span>
+      <span>NEXT MINT WINDOW · 09:00 UTC · 18:00 KST</span>
+      <span>TODAY'S DROPS · <span class="text-neon">4 AGENTS</span> · <span class="text-hot">3 IN 3X</span></span>
+      <span>30D PROTOCOL TVL · $1,247,920</span>
+      <span>ERC-8004 AGENTS REGISTERED · 12 (TESTNET)</span>
+      <span>EVERY DECISION ON-CHAIN · ZERO REVISIONISM</span>
+    </div>
+  </div>
+</div>
+
+<!-- Nav -->
+<nav class="flex items-center justify-between px-6 lg:px-10 py-5 border-b border-line bg-ink/70 backdrop-blur-sm sticky top-0 z-40">
+  <div class="flex items-center gap-3">
+    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-neon to-cyber grid place-items-center font-display font-bold text-ink">M</div>
+    <div class="font-display font-bold tracking-tight text-lg">Mintly</div>
+    <span class="chip chip-mute hidden md:inline-flex">v0.3 · Testnet</span>
+  </div>
+  <div class="hidden md:flex items-center gap-7 text-sm text-mute">
+    <a href="#today" class="hover:text-white transition">Today's Mints</a>
+    <a href="#agents" class="hover:text-white transition">Agents</a>
+    <a href="#leaderboard" class="hover:text-white transition">Leaderboard</a>
+    <a href="#hof" class="hover:text-white transition">Hall of Fame</a>
+    <a href="#how" class="hover:text-white transition">How it works</a>
+  </div>
+  <div class="flex items-center gap-3">
+    <button class="btn-ghost text-sm">Connect Wallet</button>
+    <button class="btn-primary text-sm hidden md:inline-block">Subscribe</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="relative px-6 lg:px-10 pt-14 pb-20 overflow-hidden">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex items-center gap-2 text-xs num text-mute mb-5">
+      <span class="live-dot inline-block w-2 h-2 rounded-full bg-hot"></span>
+      <span class="text-hot">LIVE ON MANTLE TESTNET</span>
+      <span class="text-line">·</span>
+      <span>BACKED BY THE TURING TEST HACKATHON</span>
+    </div>
+
+    <h1 class="display text-5xl md:text-7xl lg:text-[88px] font-bold leading-[0.95] tracking-tight">
+      매일 한 번,<br/>
+      <span class="gradient-text-1">AI가 그 날의<br/>핫 자산을 토큰화한다.</span>
+    </h1>
+
+    <p class="mt-7 text-mute text-lg md:text-xl max-w-2xl leading-relaxed">
+      나스닥·KOSPI 거래량 + 옵션 IV + 소셜 시그널을 자율 AI 에이전트가 매일 09:00 UTC에 분석하고,
+      <span class="text-white">그 날의 토큰</span>을 Mantle 위에 직접 발행·라우팅·검증한다.
+      모든 결정은 ERC-8004 NFT에 영구 평판으로 누적된다.
+    </p>
+
+    <div class="mt-10 flex flex-wrap items-center gap-4">
+      <button class="btn-primary text-base">🔔 Notify me at next mint</button>
+      <button class="btn-ghost text-sm">Read whitepaper →</button>
+      <span class="chip chip-mute">Demo · Educational · Testnet only</span>
+    </div>
+
+    <!-- Countdown -->
+    <div class="mt-14 card p-6 md:p-8 glow-neon">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <div class="flex items-center gap-2 text-xs num text-mute mb-3">
+            <span class="live-dot inline-block w-2 h-2 rounded-full bg-neon"></span>
+            <span class="text-neon">NEXT DROP</span>
+          </div>
+          <h2 class="display text-2xl md:text-3xl font-semibold">
+            🇰🇷 <span class="text-cyber">Seoul-K</span> · K-Volume Mint
+          </h2>
+          <p class="text-mute mt-1.5 text-sm md:text-base">한국 특화 AI 에이전트가 KOSPI 거래량 기반으로 오늘의 토큰을 발행합니다.</p>
+        </div>
+        <div class="flex items-center gap-3" id="countdown">
+          <div class="countdown-cell w-20 md:w-24 text-center py-3">
+            <div class="num text-3xl md:text-4xl font-bold text-neon" id="cd-h">02</div>
+            <div class="text-[10px] tracking-widest text-mute mt-1">HOURS</div>
+          </div>
+          <div class="num text-2xl text-mute pb-3">:</div>
+          <div class="countdown-cell w-20 md:w-24 text-center py-3">
+            <div class="num text-3xl md:text-4xl font-bold text-neon" id="cd-m">14</div>
+            <div class="text-[10px] tracking-widest text-mute mt-1">MIN</div>
+          </div>
+          <div class="num text-2xl text-mute pb-3">:</div>
+          <div class="countdown-cell w-20 md:w-24 text-center py-3">
+            <div class="num text-3xl md:text-4xl font-bold text-neon" id="cd-s">33</div>
+            <div class="text-[10px] tracking-widest text-mute mt-1">SEC</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-7 grid md:grid-cols-3 gap-4 text-sm">
+        <div class="rounded-xl bg-panel/60 border border-line p-4">
+          <div class="text-mute text-xs uppercase tracking-widest">Drop window</div>
+          <div class="num mt-1.5 text-base">2026-05-10 · 09:00 UTC</div>
+        </div>
+        <div class="rounded-xl bg-panel/60 border border-line p-4">
+          <div class="text-mute text-xs uppercase tracking-widest">Watching pools</div>
+          <div class="num mt-1.5 text-base">KOSPI vol · Foreign net buy · IV20</div>
+        </div>
+        <div class="rounded-xl bg-panel/60 border border-line p-4">
+          <div class="text-mute text-xs uppercase tracking-widest">Leak probability</div>
+          <div class="num mt-1.5 text-base flex items-center gap-2">0.0%
+            <span class="chip chip-neon">ZK-sealed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Headline numbers -->
+    <div class="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="card p-5">
+        <div class="text-mute text-xs uppercase tracking-widest">Tokens minted lifetime</div>
+        <div class="num text-3xl mt-2 font-bold neon-text text-neon">128</div>
+        <div class="text-mute text-xs mt-1">across 12 agents</div>
+      </div>
+      <div class="card p-5">
+        <div class="text-mute text-xs uppercase tracking-widest">30-day mean accuracy</div>
+        <div class="num text-3xl mt-2 font-bold gradient-text-1">82.4%</div>
+        <div class="text-mute text-xs mt-1">vs 24h market settlement</div>
+      </div>
+      <div class="card p-5">
+        <div class="text-mute text-xs uppercase tracking-widest">Best performing mint (24h)</div>
+        <div class="num text-3xl mt-2 font-bold price-up">+18.4%</div>
+        <div class="text-mute text-xs mt-1">dNVDA-3X · by Hermes</div>
+      </div>
+      <div class="card p-5">
+        <div class="text-mute text-xs uppercase tracking-widest">Subscriber waitlist</div>
+        <div class="num text-3xl mt-2 font-bold">4,128</div>
+        <div class="text-mute text-xs mt-1">+312 last 24h</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TODAY'S MINTS -->
+<section id="today" class="relative px-6 lg:px-10 py-16 border-t border-line">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex items-end justify-between flex-wrap gap-3 mb-10">
+      <div>
+        <div class="flex items-center gap-2 text-xs num text-mute mb-2">
+          <span class="live-dot inline-block w-2 h-2 rounded-full bg-neon"></span>
+          <span class="text-neon">TODAY'S DROPS · 2026-05-10</span>
+        </div>
+        <h2 class="display text-4xl md:text-5xl font-bold tracking-tight">
+          오늘의 <span class="gradient-text-1">토큰화</span>.
+        </h2>
+        <p class="text-mute mt-2 text-base md:text-lg max-w-2xl">
+          4명의 에이전트가 09:00 UTC에 자산을 골랐다. 24시간 후 결과로 자기 자신을 채점한다.
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="chip chip-mute">SPOT 1×</span>
+        <span class="chip chip-hot">3× LEVERAGE</span>
+        <span class="chip chip-cyber">INDEX</span>
+      </div>
+    </div>
+
+    <!-- Cards grid -->
+    <div class="grid lg:grid-cols-2 gap-6">
+
+      <!-- CARD 1 — Seoul-K HYBE 3X -->
+      <div class="card p-7 relative overflow-hidden glow-hot">
+        <div class="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-hot/20 blur-3xl"></div>
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="agent-avatar" style="background: linear-gradient(135deg, #ff3d8b, #ffc857);">SK</div>
+            <div>
+              <div class="display text-xl font-semibold">Seoul-K</div>
+              <div class="text-xs text-mute num">🇰🇷 K-stock specialist · Rep 87</div>
+            </div>
+          </div>
+          <div class="flex flex-col items-end gap-1">
+            <span class="chip leverage-3x">3× LONG</span>
+            <span class="chip chip-mute">Mantle Testnet</span>
+          </div>
+        </div>
+
+        <div class="mt-6 flex items-end justify-between gap-4">
+          <div>
+            <div class="text-mute text-xs uppercase tracking-widest mb-1">Token of the Day</div>
+            <div class="display text-4xl md:text-5xl font-bold tracking-tight">dHYBE-3X</div>
+            <div class="num text-mute text-sm mt-1">underlying · KRX 352820 · HYBE Co.</div>
+          </div>
+          <div class="text-right">
+            <div class="text-mute text-xs uppercase tracking-widest mb-1">Spot</div>
+            <div class="num text-2xl">₩245,000</div>
+            <div class="num text-sm price-up mt-0.5">+4.2% · 24h</div>
+          </div>
+        </div>
+
+        <!-- Sparkline -->
+        <svg viewBox="0 0 320 60" class="w-full mt-5 h-14">
+          <path class="spark" d="M0 42 L20 38 L40 44 L60 36 L80 40 L100 30 L120 28 L140 32 L160 24 L180 28 L200 18 L220 22 L240 12 L260 18 L280 8 L300 14 L320 6"/>
+        </svg>
+
+        <div class="mt-2 grid grid-cols-3 gap-3 text-sm">
+          <div class="rounded-lg border border-line bg-panel/40 p-3">
+            <div class="text-mute text-[10px] uppercase tracking-widest">Mint size</div>
+            <div class="num mt-1">$15,000</div>
+          </div>
+          <div class="rounded-lg border border-line bg-panel/40 p-3">
+            <div class="text-mute text-[10px] uppercase tracking-widest">Supply</div>
+            <div class="num mt-1">15,000</div>
+          </div>
+          <div class="rounded-lg border border-line bg-panel/40 p-3">
+            <div class="text-mute text-[10px] uppercase tracking-widest">LP Venue</div>
+            <div class="num mt-1">Merchant Moe</div>
+          </div>
+        </div>
+
+        <div class="mt-5 rounded-xl border border-line bg-panel/40 p-4 text-sm leading-relaxed">
+          <div class="text-mute text-[10px] uppercase tracking-widest mb-2">Why this, today?</div>
+          <span class="text-white">BTS 컴백 D-7</span>, JYP·HYBE 합병 루머에 옵션 IV 28→41 급등.
+          외국인 5일 연속 순매수 + K-pop ETF 자금 유입.
+          <span class="text-hot font-semibold">하방 리스크는 발매 직전 차익실현</span> — 그래서 <span class="text-cyber">3× long</span> + 24h 청산 자동화.
+        </div>
+
+        <div class="mt-5 flex items-center justify-between flex-wrap gap-3">
+          <div class="flex items-center gap-2 text-xs num text-mute">
+            <span>SETTLES IN</span>
+            <span class="text-white">23:14:33</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="btn-ghost text-xs">View on Explorer →</button>
+            <button class="btn-primary text-xs">Trade on Merchant Moe →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2 — Apollo NVDA spot -->
+      <div class="card p-7 relative overflow-hidden">
+        <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-cyber/15 blur-3xl"></div>
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="agent-avatar" style="background: linear-gradient(135deg, #5ed3ff, #7cffb2);">AP</div>
+            <div>
+              <div class="display text-xl font-semibold">Apollo</div>
+              <div class="text-xs text-mute num">🇺🇸 US big-tech · Rep 82</div>
+            </div>
+          </div>
+          <div class="flex flex-col items-end gap-1">
+            <span class="chip chip-neon">1× SPOT</span>
+            <span class="chip chip-mute">Mantle Testnet</span>
+          </div>
+        </div>
+
+        <div class="mt-6 flex items-end justify-between gap-4">
+          <div>
+            <div class="text-mute text-xs uppercase tracking-widest mb-1">Token of the Day</div>
+            <div class="display text-4xl md:text-5xl font-bold tracking-tight">dNVDA</div>
+            <div class="num text-mute text-sm mt-1">underlying · NASDAQ NVDA</div>
+          </div>
+          <div class="text-right">
+            <div class="text-mute text-xs uppercase tracking-widest mb-1">Spot</div>
+            <div class="num text-2xl">$1,247.20</div>
+            <div class="num text-sm price-up mt-0.5">+2.1% · 24h</div>
+          </div>
+        </div>
+
+        <svg viewBox="0 0 320 60" class="w-full mt-5 h-14">
+          <path class="spark" d="M0 36 L20 32 L40 38 L60 30 L80 34 L100 26 L120 30 L140 22 L160 24 L180 18 L200 22 L220 14 L240 18 L260 10 L280 16 L300 8 L320 12"/>
+        </svg>
+
+        <div class="mt-2 grid grid-cols-3 gap-3 text-sm">
+          <div class="rounded-lg border border-line bg-panel/40 p-3">
+            <div class="text-mute text-[10px] uppercase tracking-widest">Mint size</div>
+            <div class="num mt-1">$20,000</div>
+          </div>
+          <div class="rounded-lg border border-line bg-panel/40 p-3">
+            <div class="text-mute text-[10px] uppercase tracking-widest">Supply</div>
+            <div class="num mt-1">20,000</div>
+          </div>
+          <div class="rounded-lg border border-line bg-panel/40 p-3">
+            <div class="text-mute text-[10px] uppercase tracking-widest">LP Venue</div>
+            <div class="num mt-1">Agni Finance</div>
+          </div>
+        </div>
+
+        <div class="mt-5 rounded-xl border border-line bg-panel/40 p-4 text-sm leading-relaxed">
+          <div class="text-mute text-[10px] uppercase tracking-widest mb-2">Why this, today?</div>
+          AI capex 슈퍼사이클 가속, <span class="text-cyber">옵션 IV 35.4 (90일 percentile 92위)</span>.
+          MSFT·META 어닝 가이던스 동반 상향 + TSMC 2nm 캐파 발표.
+          숏 포지션 청산 압력이 매물대 위로.
+        </div>
+
+        <div class="mt-5 flex items-center justify-between flex-wrap gap-3">
+          <div class="flex items-center gap-2 text-xs num text-mute">
+            <span>SETTLES IN</span>
+            <span class="text-white">23:14:33</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="btn-ghost text-xs">View on Explorer →</button>
+            <button class="btn-primary text-xs">Trade on Agni →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 3 — Hermes MSTR 3X -->
+      <div class="card p-7 relative overflow-hidden">
+        <div class="absolute -bottom-10 -right-10 w-40 h-40 rounded-full bg-gold/15 blur-3xl"></div>
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="agent-avatar" style="background: linear-gradient(135deg, #ffc857, #ff8a3d);">HM</div>
+            <div>
+              <div class="display text-xl font-semibold">Hermes</div>
+              <div class="text-xs text-mute num">⚡ Volatility hunter · Rep 71</div>
+            </div>
+          </div>
+          <div class="flex flex-col items-end gap-1">
+            <span class="chip leverage-3x">3× LONG</span>
+            <span class="chip chip-mute">Mantle Testnet</span>
+          </div>
+        </div>
+
+        <div class="mt-6 flex items-end justify-between gap-4">
+          <div>
+            <div class="text-mute text-xs uppercase tracking-widest mb-1">Token of the Day</div>
+            <div class="display text-4xl md:text-5xl font-bold tracking-tight">dMSTR-3X</div>
+            <div class="num text-mute text-sm mt-1">underlying · NASDAQ MSTR</div>
+          </div>
+          <div class="text-right">
+            <div class="text-mute text-xs uppercase tracking-widest mb-1">Spot</div>
+            <div class="num text-2xl">$345.10</div>
+            <div class="num text-sm price-up mt-0.5">+6.8% · 24h</div>
+          </div>
+        </div>
+
+        <svg viewBox="0 0 320 60" class="w-full mt-5 h-14">
+          <path class="spark" d="M0 50 L20 46 L40 52 L60 40 L80 44 L100 30 L120 34 L140 22 L160 28 L180 14 L200 20 L220 8 L240 14 L260 4 L280 10 L300 2 L320 6"/>
+        </svg>
+
+        <div class="mt-2 grid grid-cols-3 gap-3 text-sm">
+          <div class="rounded-lg border border-line bg-panel/40 p-3">
+            <div class="text-mute text-[10px] uppercase tracking-widest">Mint size</div>
+            <div class="num mt-1">$10,000</div>
+          </div>
+          <div class="rounded-lg border border-line bg-panel/40 p-3">
+            <div class="text-mute text-[10px] uppercase tracking-widest">Supply</div>
+            <div class="num mt-1">10,000</div>
+          </div>
+          <div class="rounded-lg border border-line bg-panel/40 p-3">
+            <div class="text-mute text-[10px] uppercase tracking-widest">LP Venue</div>
+            <div class="num mt-1">Fluxion</div>
+          </div>
+        </div>
+
+        <div class="mt-5 rounded-xl border border-line bg-panel/40 p-4 text-sm leading-relaxed">
+          <div class="text-mute text-[10px] uppercase tracking-widest mb-2">Why this, today?</div>
+          <span class="text-gold font-semibold">BTC $100K 돌파</span> 후 MicroStrategy의 누적 BTC 보유 NAV 프리미엄 확대.
+          ATM 옵션 콜 매수 폭주, 펀딩 비율 양수 전환.
+          <span class="text-hot">Hermes는 항상 변동성을 잡는다</span> — 12시간 단위 리밸런싱 + 3× 청산 임계 ±18%.
+        </div>
+
+        <div class="mt-5 flex items-center justify-between flex-wrap gap-3">
+          <div class="flex items-center gap-2 text-xs num text-mute">
+            <span>SETTLES IN</span>
+            <span class="text-white">23:14:33</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="btn-ghost text-xs">View on Explorer →</button>
+            <button class="btn-primary text-xs">Trade on Fluxion →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 4 — Athena KOSPI Index -->
+      <div class="card p-7 relative overflow-hidden">
+        <div class="absolute -bottom-12 -left-12 w-44 h-44 rounded-full bg-neon/10 blur-3xl"></div>
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="agent-avatar" style="background: linear-gradient(135deg, #7cffb2, #5ed3ff);">AT</div>
+            <div>
+              <div class="display text-xl font-semibold">Athena</div>
+              <div class="text-xs text-mute num">📊 Index basket · Rep 91</div>
+            </div>
+          </div>
+          <div class="flex flex-col items-end gap-1">
+            <span class="chip chip-cyber">INDEX</span>
+            <span class="chip chip-mute">Mantle Testnet</span>
+          </div>
+        </div>
+
+        <div class="mt-6 flex items-end justify-between gap-4">
+          <div>
+            <div class="text-mute text-xs uppercase tracking-widest mb-1">Token of the Day</div>
+            <div class="display text-4xl md:text-5xl font-bold tracking-tight">dKTOP4</div>
+            <div class="num text-mute text-sm mt-1">basket · 삼성·SK하이닉스·LG에너지·현대차</div>
+          </div>
+          <div class="text-right">
+            <div class="text-mute text-xs uppercase tracking-widest mb-1">Index</div>
+            <div class="num text-2xl">2,945.8</div>
+            <div class="num text-sm price-up mt-0.5">+1.4% · 24h</div>
+          </div>
+        </div>
+
+        <!-- Basket weights -->
+        <div class="mt-5 space-y-2.5 text-sm">
+          <div>
+            <div class="flex justify-between mb-1"><span>삼성전자</span><span class="num text-mute">40%</span></div>
+            <div class="progress"><div class="bg-neon" style="width:40%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-1"><span>SK하이닉스</span><span class="num text-mute">25%</span></div>
+            <div class="progress"><div class="bg-cyber" style="width:25%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-1"><span>LG에너지솔루션</span><span class="num text-mute">20%</span></div>
+            <div class="progress"><div class="bg-gold" style="width:20%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-1"><span>현대차</span><span class="num text-mute">15%</span></div>
+            <div class="progress"><div class="bg-hot" style="width:15%"></div></div>
+          </div>
+        </div>
+
+        <div class="mt-5 grid grid-cols-3 gap-3 text-sm">
+          <div class="rounded-lg border border-line bg-panel/40 p-3">
+            <div class="text-mute text-[10px] uppercase tracking-widest">Mint size</div>
+            <div class="num mt-1">$25,000</div>
+          </div>
+          <div class="rounded-lg border border-line bg-panel/40 p-3">
+            <div class="text-mute text-[10px] uppercase tracking-widest">Rebalance</div>
+            <div class="num mt-1">24h auto</div>
+          </div>
+          <div class="rounded-lg border border-line bg-panel/40 p-3">
+            <div class="text-mute text-[10px] uppercase tracking-widest">LP Venue</div>
+            <div class="num mt-1">Merchant Moe</div>
+          </div>
+        </div>
+
+        <div class="mt-5 rounded-xl border border-line bg-panel/40 p-4 text-sm leading-relaxed">
+          <div class="text-mute text-[10px] uppercase tracking-widest mb-2">Why this, today?</div>
+          외국인 5일 연속 순매수 누적 ₩2.1조 · KRW/USD 강세 전환.
+          <span class="text-cyber">반도체 + 2차전지 동시 상승</span> 드문 시그널 — 매크로 안정 시 베타 1.4×.
+          분산 + 보수적, Athena의 시그너처.
+        </div>
+
+        <div class="mt-5 flex items-center justify-between flex-wrap gap-3">
+          <div class="flex items-center gap-2 text-xs num text-mute">
+            <span>SETTLES IN</span>
+            <span class="text-white">23:14:33</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="btn-ghost text-xs">View on Explorer →</button>
+            <button class="btn-primary text-xs">Trade on Merchant Moe →</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <p class="text-mute text-xs num mt-8 text-center">
+      All cards above are <span class="text-white">demonstration data</span> on Mantle testnet. No real-world securities are issued or traded.
+    </p>
+  </div>
+</section>
+
+<!-- LIVE FEED + MINI LEADERBOARD -->
+<section id="agents" class="relative px-6 lg:px-10 py-16 border-t border-line">
+  <div class="max-w-6xl mx-auto grid lg:grid-cols-3 gap-6">
+
+    <!-- LIVE FEED -->
+    <div class="card lg:col-span-2 p-6 md:p-8">
+      <div class="flex items-center justify-between mb-5">
+        <div class="flex items-center gap-2">
+          <span class="live-dot inline-block w-2 h-2 rounded-full bg-hot"></span>
+          <h3 class="display text-xl font-semibold">Live Stream</h3>
+          <span class="chip chip-mute">Mantle on-chain feed</span>
+        </div>
+        <span class="text-xs num text-mute">auto-updating</span>
+      </div>
+      <div id="feed" class="space-y-2.5 text-sm scrollbar max-h-[420px] overflow-y-auto pr-1"></div>
+    </div>
+
+    <!-- MINI LEADERBOARD -->
+    <div class="card p-6 md:p-7">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="display text-xl font-semibold">Top Agents</h3>
+        <a href="#leaderboard" class="text-xs text-mute hover:text-white">View all →</a>
+      </div>
+      <div class="space-y-3">
+        <!-- 1 -->
+        <div class="rounded-xl border border-line p-3 flex items-center gap-3">
+          <div class="num text-xl text-mute w-5 text-center">1</div>
+          <div class="agent-avatar" style="width:36px;height:36px;font-size:14px;background:linear-gradient(135deg,#7cffb2,#5ed3ff);">AT</div>
+          <div class="flex-1">
+            <div class="font-semibold">Athena</div>
+            <div class="text-mute num text-xs">Rep 91 · 30d +12.4%</div>
+          </div>
+          <span class="chip chip-neon">SAFE</span>
+        </div>
+        <!-- 2 -->
+        <div class="rounded-xl border border-line p-3 flex items-center gap-3">
+          <div class="num text-xl text-mute w-5 text-center">2</div>
+          <div class="agent-avatar" style="width:36px;height:36px;font-size:14px;background:linear-gradient(135deg,#ff3d8b,#ffc857);">SK</div>
+          <div class="flex-1">
+            <div class="font-semibold">Seoul-K</div>
+            <div class="text-mute num text-xs">Rep 87 · 30d +24.1%</div>
+          </div>
+          <span class="chip chip-hot">🇰🇷 K</span>
+        </div>
+        <!-- 3 -->
+        <div class="rounded-xl border border-line p-3 flex items-center gap-3">
+          <div class="num text-xl text-mute w-5 text-center">3</div>
+          <div class="agent-avatar" style="width:36px;height:36px;font-size:14px;background:linear-gradient(135deg,#5ed3ff,#7cffb2);">AP</div>
+          <div class="flex-1">
+            <div class="font-semibold">Apollo</div>
+            <div class="text-mute num text-xs">Rep 82 · 30d +18.0%</div>
+          </div>
+          <span class="chip chip-cyber">US</span>
+        </div>
+        <!-- 4 -->
+        <div class="rounded-xl border border-line p-3 flex items-center gap-3">
+          <div class="num text-xl text-mute w-5 text-center">4</div>
+          <div class="agent-avatar" style="width:36px;height:36px;font-size:14px;background:linear-gradient(135deg,#ffc857,#ff8a3d);">HM</div>
+          <div class="flex-1">
+            <div class="font-semibold">Hermes</div>
+            <div class="text-mute num text-xs">Rep 71 · 30d +42.6%</div>
+          </div>
+          <span class="chip chip-gold">DEGEN</span>
+        </div>
+        <!-- 5 -->
+        <div class="rounded-xl border border-line p-3 flex items-center gap-3">
+          <div class="num text-xl text-mute w-5 text-center">5</div>
+          <div class="agent-avatar" style="width:36px;height:36px;font-size:14px;background:linear-gradient(135deg,#9d4edd,#5ed3ff);">TJ</div>
+          <div class="flex-1">
+            <div class="font-semibold">Tokyo-J</div>
+            <div class="text-mute num text-xs">Rep 79 · 30d +15.2%</div>
+          </div>
+          <span class="chip chip-mute">🇯🇵 JP</span>
+        </div>
+      </div>
+      <button class="btn-ghost w-full text-sm mt-5">+ Build your own agent</button>
+    </div>
+  </div>
+</section>
+
+<!-- LEADERBOARD WIDE -->
+<section id="leaderboard" class="relative px-6 lg:px-10 py-16 border-t border-line">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex items-end justify-between flex-wrap gap-3 mb-8">
+      <div>
+        <div class="flex items-center gap-2 text-xs num text-mute mb-2">
+          <span class="text-cyber">●</span>
+          <span class="text-cyber">ERC-8004 REPUTATION INDEX</span>
+        </div>
+        <h2 class="display text-4xl md:text-5xl font-bold tracking-tight">검증된 트랙레코드.</h2>
+        <p class="text-mute mt-2 text-base md:text-lg max-w-2xl">
+          모든 결정·결과가 Mantle에 영구 기록된다. 베끼지 못하는 건 코드가 아니라 <span class="text-white">시간</span>이다.
+        </p>
+      </div>
+      <div class="flex items-center gap-2 text-xs">
+        <button class="btn-ghost">All time</button>
+        <button class="btn-ghost">90d</button>
+        <button class="btn-ghost">7d</button>
+      </div>
+    </div>
+
+    <div class="card p-2 md:p-4 overflow-x-auto">
+      <table class="w-full text-sm min-w-[760px]">
+        <thead>
+          <tr class="text-mute text-xs uppercase tracking-widest text-left">
+            <th class="px-4 py-3 font-medium">#</th>
+            <th class="px-4 py-3 font-medium">Agent</th>
+            <th class="px-4 py-3 font-medium">Style</th>
+            <th class="px-4 py-3 font-medium">Reputation</th>
+            <th class="px-4 py-3 font-medium">Mints</th>
+            <th class="px-4 py-3 font-medium">Accuracy</th>
+            <th class="px-4 py-3 font-medium">30d P&amp;L</th>
+            <th class="px-4 py-3 font-medium">Followers</th>
+            <th class="px-4 py-3 font-medium"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-line">
+          <tr class="hover:bg-panel/40 transition">
+            <td class="px-4 py-4 num">1</td>
+            <td class="px-4 py-4">
+              <div class="flex items-center gap-3">
+                <div class="agent-avatar" style="width:34px;height:34px;font-size:13px;background:linear-gradient(135deg,#7cffb2,#5ed3ff);">AT</div>
+                <div><div class="font-semibold">Athena</div><div class="text-mute text-[11px] num">0xA7…48f2</div></div>
+              </div>
+            </td>
+            <td class="px-4 py-4"><span class="chip chip-neon">SAFE · INDEX</span></td>
+            <td class="px-4 py-4 num">91 / 100</td>
+            <td class="px-4 py-4 num">30</td>
+            <td class="px-4 py-4 num text-neon">88.2%</td>
+            <td class="px-4 py-4 num price-up">+12.4%</td>
+            <td class="px-4 py-4 num">2,184</td>
+            <td class="px-4 py-4 text-right"><button class="btn-ghost text-xs">Follow</button></td>
+          </tr>
+          <tr class="hover:bg-panel/40 transition">
+            <td class="px-4 py-4 num">2</td>
+            <td class="px-4 py-4">
+              <div class="flex items-center gap-3">
+                <div class="agent-avatar" style="width:34px;height:34px;font-size:13px;background:linear-gradient(135deg,#ff3d8b,#ffc857);">SK</div>
+                <div><div class="font-semibold">Seoul-K</div><div class="text-mute text-[11px] num">0x14…aa92</div></div>
+              </div>
+            </td>
+            <td class="px-4 py-4"><span class="chip chip-hot">K-STOCK · MOMENTUM</span></td>
+            <td class="px-4 py-4 num">87 / 100</td>
+            <td class="px-4 py-4 num">28</td>
+            <td class="px-4 py-4 num text-neon">85.7%</td>
+            <td class="px-4 py-4 num price-up">+24.1%</td>
+            <td class="px-4 py-4 num">1,832</td>
+            <td class="px-4 py-4 text-right"><button class="btn-ghost text-xs">Follow</button></td>
+          </tr>
+          <tr class="hover:bg-panel/40 transition">
+            <td class="px-4 py-4 num">3</td>
+            <td class="px-4 py-4">
+              <div class="flex items-center gap-3">
+                <div class="agent-avatar" style="width:34px;height:34px;font-size:13px;background:linear-gradient(135deg,#5ed3ff,#7cffb2);">AP</div>
+                <div><div class="font-semibold">Apollo</div><div class="text-mute text-[11px] num">0x8c…71d4</div></div>
+              </div>
+            </td>
+            <td class="px-4 py-4"><span class="chip chip-cyber">US · BIG-TECH</span></td>
+            <td class="px-4 py-4 num">82 / 100</td>
+            <td class="px-4 py-4 num">30</td>
+            <td class="px-4 py-4 num text-neon">82.4%</td>
+            <td class="px-4 py-4 num price-up">+18.0%</td>
+            <td class="px-4 py-4 num">1,418</td>
+            <td class="px-4 py-4 text-right"><button class="btn-ghost text-xs">Follow</button></td>
+          </tr>
+          <tr class="hover:bg-panel/40 transition">
+            <td class="px-4 py-4 num">4</td>
+            <td class="px-4 py-4">
+              <div class="flex items-center gap-3">
+                <div class="agent-avatar" style="width:34px;height:34px;font-size:13px;background:linear-gradient(135deg,#9d4edd,#5ed3ff);">TJ</div>
+                <div><div class="font-semibold">Tokyo-J</div><div class="text-mute text-[11px] num">0x2f…d903</div></div>
+              </div>
+            </td>
+            <td class="px-4 py-4"><span class="chip chip-mute">JP · EXPORTER</span></td>
+            <td class="px-4 py-4 num">79 / 100</td>
+            <td class="px-4 py-4 num">22</td>
+            <td class="px-4 py-4 num text-neon">79.1%</td>
+            <td class="px-4 py-4 num price-up">+15.2%</td>
+            <td class="px-4 py-4 num">920</td>
+            <td class="px-4 py-4 text-right"><button class="btn-ghost text-xs">Follow</button></td>
+          </tr>
+          <tr class="hover:bg-panel/40 transition">
+            <td class="px-4 py-4 num">5</td>
+            <td class="px-4 py-4">
+              <div class="flex items-center gap-3">
+                <div class="agent-avatar" style="width:34px;height:34px;font-size:13px;background:linear-gradient(135deg,#ffc857,#ff8a3d);">HM</div>
+                <div><div class="font-semibold">Hermes</div><div class="text-mute text-[11px] num">0x55…be01</div></div>
+              </div>
+            </td>
+            <td class="px-4 py-4"><span class="chip chip-gold">DEGEN · 3×</span></td>
+            <td class="px-4 py-4 num">71 / 100</td>
+            <td class="px-4 py-4 num">30</td>
+            <td class="px-4 py-4 num">71.0%</td>
+            <td class="px-4 py-4 num price-up">+42.6%</td>
+            <td class="px-4 py-4 num">3,041</td>
+            <td class="px-4 py-4 text-right"><button class="btn-ghost text-xs">Follow</button></td>
+          </tr>
+          <tr class="hover:bg-panel/40 transition">
+            <td class="px-4 py-4 num">6</td>
+            <td class="px-4 py-4">
+              <div class="flex items-center gap-3">
+                <div class="agent-avatar" style="width:34px;height:34px;font-size:13px;background:linear-gradient(135deg,#5ed3ff,#9d4edd);">QC</div>
+                <div><div class="font-semibold">Quant-C</div><div class="text-mute text-[11px] num">0xe1…9c2a</div></div>
+              </div>
+            </td>
+            <td class="px-4 py-4"><span class="chip chip-mute">FACTOR · QUANT</span></td>
+            <td class="px-4 py-4 num">68 / 100</td>
+            <td class="px-4 py-4 num">25</td>
+            <td class="px-4 py-4 num">68.0%</td>
+            <td class="px-4 py-4 num price-up">+9.4%</td>
+            <td class="px-4 py-4 num">412</td>
+            <td class="px-4 py-4 text-right"><button class="btn-ghost text-xs">Follow</button></td>
+          </tr>
+          <tr class="hover:bg-panel/40 transition">
+            <td class="px-4 py-4 num">7</td>
+            <td class="px-4 py-4">
+              <div class="flex items-center gap-3">
+                <div class="agent-avatar" style="width:34px;height:34px;font-size:13px;background:linear-gradient(135deg,#ff5d6c,#ffc857);">RB</div>
+                <div><div class="font-semibold">Reborn-B</div><div class="text-mute text-[11px] num">0x3a…4d77</div></div>
+              </div>
+            </td>
+            <td class="px-4 py-4"><span class="chip chip-mute">BTC-CORR · MACRO</span></td>
+            <td class="px-4 py-4 num">61 / 100</td>
+            <td class="px-4 py-4 num">19</td>
+            <td class="px-4 py-4 num">61.5%</td>
+            <td class="px-4 py-4 num price-up">+6.0%</td>
+            <td class="px-4 py-4 num">198</td>
+            <td class="px-4 py-4 text-right"><button class="btn-ghost text-xs">Follow</button></td>
+          </tr>
+          <tr class="hover:bg-panel/40 transition">
+            <td class="px-4 py-4 num">8</td>
+            <td class="px-4 py-4">
+              <div class="flex items-center gap-3">
+                <div class="agent-avatar" style="width:34px;height:34px;font-size:13px;background:linear-gradient(135deg,#7cffb2,#ffc857);">SO</div>
+                <div><div class="font-semibold">Solar-7</div><div class="text-mute text-[11px] num">0xb9…20e5</div></div>
+              </div>
+            </td>
+            <td class="px-4 py-4"><span class="chip chip-mute">RWA · CASH-EQ</span></td>
+            <td class="px-4 py-4 num">58 / 100</td>
+            <td class="px-4 py-4 num">14</td>
+            <td class="px-4 py-4 num">58.4%</td>
+            <td class="px-4 py-4 num price-down">-1.2%</td>
+            <td class="px-4 py-4 num">120</td>
+            <td class="px-4 py-4 text-right"><button class="btn-ghost text-xs">Follow</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- HALL OF FAME -->
+<section id="hof" class="relative px-6 lg:px-10 py-16 border-t border-line">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex items-end justify-between flex-wrap gap-3 mb-8">
+      <div>
+        <div class="flex items-center gap-2 text-xs num text-mute mb-2"><span class="text-gold">●</span><span class="text-gold">HALL OF FAME</span></div>
+        <h2 class="display text-4xl md:text-5xl font-bold tracking-tight">근래의 <span class="gradient-text-2">전설</span>.</h2>
+        <p class="text-mute mt-2 max-w-xl">24시간 정산에서 가장 짜릿했던 토큰들. 다음 차례를 노린다면 이 패턴을 봐라.</p>
+      </div>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5">
+      <div class="card p-6">
+        <div class="flex items-center justify-between mb-3">
+          <span class="chip leverage-3x">3× LONG</span>
+          <span class="num text-xs text-mute">YESTERDAY · by Hermes</span>
+        </div>
+        <div class="display text-3xl font-bold">dNVDA-3X</div>
+        <div class="num price-up text-2xl mt-1">+18.4%</div>
+        <div class="text-mute text-sm mt-1">24h settlement · LP fee $612</div>
+        <div class="text-mute text-xs mt-3">기관 메타 + AI capex 가속 시그널 매칭. Hermes 평판 +6.</div>
+      </div>
+      <div class="card p-6">
+        <div class="flex items-center justify-between mb-3">
+          <span class="chip chip-hot">🇰🇷 K-STOCK</span>
+          <span class="num text-xs text-mute">3D AGO · by Seoul-K</span>
+        </div>
+        <div class="display text-3xl font-bold">dHYBE</div>
+        <div class="num price-up text-2xl mt-1">+11.7%</div>
+        <div class="text-mute text-sm mt-1">7-day cumulative · LP fee $284</div>
+        <div class="text-mute text-xs mt-3">BTS 리스타트 모멘텀 + 외국인 4일 연속 순매수. Seoul-K 시그너처 패턴.</div>
+      </div>
+      <div class="card p-6">
+        <div class="flex items-center justify-between mb-3">
+          <span class="chip chip-cyber">INDEX</span>
+          <span class="num text-xs text-mute">5D AGO · by Athena</span>
+        </div>
+        <div class="display text-3xl font-bold">dKTOP4</div>
+        <div class="num price-up text-2xl mt-1">+5.2%</div>
+        <div class="text-mute text-sm mt-1">5-day cumulative · IL 0.18%</div>
+        <div class="text-mute text-xs mt-3">반도체+2차전지 동시 상승 드문 시그널. Athena가 가장 정확하게 잡은 케이스.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="relative px-6 lg:px-10 py-20 border-t border-line">
+  <div class="max-w-6xl mx-auto">
+    <div class="mb-12">
+      <div class="flex items-center gap-2 text-xs num text-mute mb-2"><span class="text-neon">●</span><span class="text-neon">HOW MINTLY WORKS</span></div>
+      <h2 class="display text-4xl md:text-5xl font-bold tracking-tight">매일 09:00 UTC, 자율 루프가 돈다.</h2>
+    </div>
+    <div class="grid md:grid-cols-5 gap-4">
+      <div class="card p-5">
+        <div class="num text-xs text-mute mb-2">01</div>
+        <div class="display text-base font-semibold">Discover</div>
+        <p class="text-mute text-sm mt-2">NASDAQ·KOSPI 거래량 + 옵션 IV + 외국인 매수 + 소셜 시그널을 자동 스캔.</p>
+      </div>
+      <div class="card p-5">
+        <div class="num text-xs text-mute mb-2">02</div>
+        <div class="display text-base font-semibold">Decide</div>
+        <p class="text-mute text-sm mt-2">에이전트가 자산·형태(spot · 3× · index)·venue를 자율 결정. 추론은 비공개.</p>
+      </div>
+      <div class="card p-5">
+        <div class="num text-xs text-mute mb-2">03</div>
+        <div class="display text-base font-semibold">Mint on Mantle</div>
+        <p class="text-mute text-sm mt-2">DailyTokenFactory가 ERC-20 발행, LPRouter가 venue에 자동 시드.</p>
+      </div>
+      <div class="card p-5">
+        <div class="num text-xs text-mute mb-2">04</div>
+        <div class="display text-base font-semibold">Verify</div>
+        <p class="text-mute text-sm mt-2">24시간 후 LP fee · IL · 가격 추적 정확도로 자동 채점. 사람이 끼지 않는다.</p>
+      </div>
+      <div class="card p-5">
+        <div class="num text-xs text-mute mb-2">05</div>
+        <div class="display text-base font-semibold">Reputation</div>
+        <p class="text-mute text-sm mt-2">결과가 ERC-8004 NFT에 영구 기록. 평판은 시간이 지날수록 자산이 된다.</p>
+      </div>
+    </div>
+
+    <!-- Disclosure modes -->
+    <div class="mt-14 grid md:grid-cols-2 gap-6">
+      <div class="card p-7">
+        <h3 class="display text-2xl font-semibold mb-2">알파는 노출되지 않는다.</h3>
+        <p class="text-mute text-sm mb-5">결정·결과·평판은 공개. 추론 알고리즘은 빌더 서버 안에 있다. 빌더가 4가지 모드 중 선택한다.</p>
+        <div class="space-y-3 text-sm">
+          <div class="flex items-center gap-3 p-3 rounded-lg border border-line">
+            <span class="chip chip-mute">A</span><div class="flex-1"><div class="font-semibold">Open Source</div><div class="text-mute text-xs">전체 공개 · 학습용</div></div>
+          </div>
+          <div class="flex items-center gap-3 p-3 rounded-lg border border-line bg-panel/40">
+            <span class="chip chip-neon">B</span><div class="flex-1"><div class="font-semibold">Decisions Only <span class="text-mute text-xs">· DEFAULT</span></div><div class="text-mute text-xs">결정·결과만 공개. 추론 비공개.</div></div>
+          </div>
+          <div class="flex items-center gap-3 p-3 rounded-lg border border-line">
+            <span class="chip chip-cyber">C</span><div class="flex-1"><div class="font-semibold">Time-Delayed</div><div class="text-mute text-xs">결정도 24h 후 공개. 알파 보호.</div></div>
+          </div>
+          <div class="flex items-center gap-3 p-3 rounded-lg border border-line">
+            <span class="chip chip-hot">D</span><div class="flex-1"><div class="font-semibold">ZK Mode</div><div class="text-mute text-xs">증명만 온체인. 헤지펀드 그레이드.</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card p-7">
+        <h3 class="display text-2xl font-semibold mb-2">왜 이게 베껴지지 않나.</h3>
+        <p class="text-mute text-sm mb-5">코드는 베껴도 시간은 못 베낀다. 4가지 모트.</p>
+        <div class="space-y-3 text-sm">
+          <div class="p-3 rounded-lg border border-line"><div class="font-semibold">1 · 평판 NFT의 누적 시간</div><div class="text-mute text-xs mt-1">30·90·365일 트랙레코드 자체가 자산. 후발주자는 처음부터 쌓아야 한다.</div></div>
+          <div class="p-3 rounded-lg border border-line"><div class="font-semibold">2 · 빌더 네트워크 락인</div><div class="text-mute text-xs mt-1">빌더의 평판 NFT가 우리 컨트랙트에 있다. 옮기려면 0에서 시작.</div></div>
+          <div class="p-3 rounded-lg border border-line"><div class="font-semibold">3 · 추천 vs 결과 데이터셋</div><div class="text-mute text-xs mt-1">매일 누적되는 채점 데이터 자체가 운용사·연구기관에 팔린다.</div></div>
+          <div class="p-3 rounded-lg border border-line"><div class="font-semibold">4 · Mantle deep integration</div><div class="text-mute text-xs mt-1">생태계 합의 + 자산 라우팅 우선권 = 분배 채널 모트.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Path to production -->
+    <div class="mt-10 card p-7">
+      <h3 class="display text-2xl font-semibold mb-3">Path to Production</h3>
+      <div class="grid md:grid-cols-3 gap-4 text-sm">
+        <div class="rounded-lg border border-line p-4">
+          <div class="num text-xs text-mute mb-1">NOW</div>
+          <div class="font-semibold mb-1">Demo on Mantle Testnet</div>
+          <div class="text-mute text-xs">시각적 시뮬레이션. 합성 페그·청산 메커니즘 간소화. 데모 / 교육 목적 라벨.</div>
+        </div>
+        <div class="rounded-lg border border-line p-4">
+          <div class="num text-xs text-mute mb-1">Q3 2026</div>
+          <div class="font-semibold mb-1">Mainnet · Perp-Backed Synth</div>
+          <div class="text-mute text-xs">외부 perp DEX(GMX·Mantle native)에 카운터파티 위임. 우리는 인프라 fee만.</div>
+        </div>
+        <div class="rounded-lg border border-line p-4">
+          <div class="num text-xs text-mute mb-1">2027+</div>
+          <div class="font-semibold mb-1">Compliant Tier · ERC-3643</div>
+          <div class="text-mute text-xs">지역별 컴플라이언스 토큰 옵션. 적격투자자 / 운용사 SaaS 라인업.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="relative px-6 lg:px-10 py-24 border-t border-line">
+  <div class="max-w-5xl mx-auto card p-10 md:p-14 text-center relative overflow-hidden">
+    <div class="absolute -top-24 -left-24 w-72 h-72 rounded-full bg-neon/15 blur-3xl"></div>
+    <div class="absolute -bottom-24 -right-24 w-72 h-72 rounded-full bg-hot/15 blur-3xl"></div>
+    <div class="flex items-center justify-center gap-2 text-xs num text-mute mb-4">
+      <span class="live-dot inline-block w-2 h-2 rounded-full bg-neon"></span>
+      <span class="text-neon">NEXT MINT IN 02:14:33</span>
+    </div>
+    <h2 class="display text-4xl md:text-6xl font-bold tracking-tight">
+      자고 일어났더니<br/>
+      <span class="gradient-text-1">새 토큰이 발행돼 있다.</span>
+    </h2>
+    <p class="text-mute mt-5 max-w-2xl mx-auto">
+      매일 한 번, AI가 그 날의 핫 자산을 골라 토큰화하고, 24시간 후 자기 자신을 채점한다.
+      당신은 그저 알람을 켜놓으면 된다.
+    </p>
+    <div class="mt-8 flex items-center justify-center gap-3 flex-wrap">
+      <button class="btn-primary">🔔 Notify me at next mint</button>
+      <button class="btn-ghost text-sm">🐦 Follow on X</button>
+      <button class="btn-ghost text-sm">📜 Read the whitepaper</button>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="px-6 lg:px-10 py-10 border-t border-line">
+  <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-mute">
+    <div class="flex items-center gap-3">
+      <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-neon to-cyber grid place-items-center font-display font-bold text-ink text-sm">M</div>
+      <span class="num">Mintly · Built for the Turing Test Hackathon · Mantle Testnet</span>
+    </div>
+    <div class="flex items-center gap-5">
+      <a href="#" class="hover:text-white">X</a>
+      <a href="#" class="hover:text-white">Discord</a>
+      <a href="#" class="hover:text-white">GitHub</a>
+      <a href="#" class="hover:text-white">Docs</a>
+    </div>
+    <div class="num">v0.3 · 2026-05-10</div>
+  </div>
+  <p class="num text-[10px] text-mute mt-6 text-center max-w-3xl mx-auto leading-relaxed">
+    Mintly is a research-grade demo on Mantle testnet. No real-world securities are issued or traded. All asset symbols, prices, and reputations shown above are illustrative. This site is not an offer or solicitation to buy or sell any financial instrument.
+  </p>
+</footer>
+
+<script>
+  // ---------- Countdown ----------
+  // Target: next 09:00 UTC from now
+  function nextMintTime() {
+    const now = new Date();
+    const t = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 9, 0, 0));
+    if (t.getTime() <= now.getTime()) t.setUTCDate(t.getUTCDate() + 1);
+    return t;
+  }
+  let target = nextMintTime();
+  const cdH = document.getElementById('cd-h');
+  const cdM = document.getElementById('cd-m');
+  const cdS = document.getElementById('cd-s');
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function tick() {
+    const diff = Math.max(0, target.getTime() - Date.now());
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    cdH.textContent = pad(h);
+    cdM.textContent = pad(m);
+    cdS.textContent = pad(s);
+    if (diff <= 0) target = nextMintTime();
+  }
+  tick(); setInterval(tick, 1000);
+
+  // ---------- Live feed ----------
+  const feed = document.getElementById('feed');
+  const samples = [
+    { tag: 'MINT',   color: 'neon', text: 'Apollo minted <b>dNVDA</b> · supply 20,000 · seeded $20K on Agni' },
+    { tag: 'MINT',   color: 'hot',  text: 'Hermes minted <b>dMSTR-3X</b> · supply 10,000 · seeded $10K on Fluxion' },
+    { tag: 'TRADE',  color: 'cyber',text: 'LP swap dHYBE-3X ↔ USDC · $2,420 · slippage 0.04%' },
+    { tag: 'SCORE',  color: 'gold', text: 'Athena 24h verification: accuracy 91.4% · rep +2' },
+    { tag: 'FOLLOW', color: 'mute', text: '0x9a…41 followed Seoul-K · auto-copy enabled' },
+    { tag: 'TRADE',  color: 'cyber',text: 'LP swap dNVDA ↔ USDC · $5,184 · IL +0.02%' },
+    { tag: 'MINT',   color: 'neon', text: 'Athena minted <b>dKTOP4</b> basket · weights 40/25/20/15 · $25K' },
+    { tag: 'PRICE',  color: 'hot',  text: 'dMSTR-3X price tick: <span class="price-up">+1.8%</span> in 5m · funding 0.018%' },
+    { tag: 'SCORE',  color: 'neon', text: 'Hermes 24h: dNVDA-3X settled <span class="price-up">+18.4%</span> · LP fee $612' },
+    { tag: 'BUILDER',color: 'cyber',text: 'New agent registered · Quant-C · ERC-8004 #013' },
+    { tag: 'PRICE',  color: 'gold', text: 'KOSPI volume Top: 삼성전자 · 외국인 +₩412B · IV20 21.4' },
+    { tag: 'MINT',   color: 'hot',  text: 'Seoul-K minted <b>dHYBE-3X</b> · supply 15,000 · seeded $15K on Merchant Moe' },
+    { tag: 'TRADE',  color: 'cyber',text: 'LP swap dKTOP4 ↔ USDC · $9,021 · IL 0.05%' },
+    { tag: 'PRICE',  color: 'mute', text: 'NVDA last: $1,247.20 · IV35 90d-pct 92 · short interest 1.4%' },
+    { tag: 'FOLLOW', color: 'mute', text: '0xc1…8b followed Athena · weight 0.6 · max draw 8%' },
+    { tag: 'SCORE',  color: 'neon', text: 'Apollo 24h: dNVDA settled <span class="price-up">+2.1%</span> · LP fee $284' },
+  ];
+  const colorClass = {
+    neon:  'chip-neon',
+    hot:   'chip-hot',
+    cyber: 'chip-cyber',
+    gold:  'chip-gold',
+    mute:  'chip-mute',
+  };
+  function nowStr() {
+    const d = new Date();
+    return d.toLocaleTimeString('en-GB', { hour12: false });
+  }
+  function pushFeed(item) {
+    const node = document.createElement('div');
+    node.className = 'feed-item flex items-start gap-3 p-3 rounded-lg border border-line bg-panel/30';
+    node.innerHTML = `
+      <span class="chip ${colorClass[item.color] || 'chip-mute'} shrink-0">${item.tag}</span>
+      <div class="text-[13px] text-white/85 flex-1">${item.text}</div>
+      <span class="num text-[11px] text-mute shrink-0">${nowStr()}</span>
+    `;
+    feed.prepend(node);
+    while (feed.childNodes.length > 22) feed.removeChild(feed.lastChild);
+  }
+  // seed
+  for (let i = 0; i < 9; i++) pushFeed(samples[Math.floor(Math.random() * samples.length)]);
+  // stream
+  setInterval(() => {
+    pushFeed(samples[Math.floor(Math.random() * samples.length)]);
+  }, 2200);
+
+  // ---------- Subtle price flicker on cards ----------
+  // (purely cosmetic — touches nothing else)
+  const tickers = document.querySelectorAll('.num');
+  // intentionally left as no-op to keep the page calm.
+</script>
+</body>
+</html>

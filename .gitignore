@@ -1,0 +1,46 @@
+# deps
+node_modules/
+.pnp
+.pnp.js
+
+# bun / npm
+bun.lockb
+package-lock.json
+yarn.lock
+
+# Next.js
+.next/
+out/
+build/
+.vercel
+
+# env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/lib/
+
+# logs
+*.log
+npm-debug.log*
+bun-debug.log*
+
+# editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# misc
+.turbo
+coverage/
