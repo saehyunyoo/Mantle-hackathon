@@ -112,11 +112,42 @@ contract JionPool is ERC20, ReentrancyGuard {
         emit Mint(msg.sender, amount0, amount1);
     }
 
-    /// @notice Burn LP shares held by this pool → return token0 + token1 to `to`.
-    /// @dev TODO(W2): implement burn() — separate PR.
+    /**
+     * @notice Burn LP shares held by this pool (caller transferred them in)
+     *         and return proportional token0 + token1 to `to`.
+     *
+     * Math (V2):
+     *   liquidity   = LP shares currently sitting in this contract
+     *   amount0_out = liquidity * balance0 / totalSupply
+     *   amount1_out = liquidity * balance1 / totalSupply
+     *
+     * Pattern: caller (typically JionRouter) transfers their LP into this
+     * pool first, then calls burn(to). The pool burns those LP shares and
+     * sends out the underlying tokens.
+     *
+     * @param to recipient of the underlying token0 + token1
+     */
     function burn(address to) external nonReentrant returns (uint256 amount0, uint256 amount1) {
-        to;
-        revert("JionPool.burn: not implemented");
+        uint256 balance0 = IERC20(token0).balanceOf(address(this));
+        uint256 balance1 = IERC20(token1).balanceOf(address(this));
+        uint256 liquidity = balanceOf(address(this));
+
+        uint256 _totalSupply = totalSupply();
+        amount0 = (liquidity * balance0) / _totalSupply;
+        amount1 = (liquidity * balance1) / _totalSupply;
+        if (amount0 == 0 || amount1 == 0) revert InsufficientLiquidity();
+
+        _burn(address(this), liquidity);
+        _safeTransfer(token0, to, amount0);
+        _safeTransfer(token1, to, amount1);
+
+        // refresh reserves from post-transfer balances
+        _update(
+            IERC20(token0).balanceOf(address(this)),
+            IERC20(token1).balanceOf(address(this))
+        );
+
+        emit Burn(msg.sender, amount0, amount1, to);
     }
 
     /// @notice Swap with explicit out amounts. Caller must pre-deposit input.
@@ -155,5 +186,13 @@ contract JionPool is ERC20, ReentrancyGuard {
         reserve1 = uint112(balance1);
         blockTimestampLast = uint32(block.timestamp);
         emit Sync(reserve0, reserve1);
+    }
+
+    /// @dev ERC-20 transfer that surfaces both `revert` and `return false`.
+    function _safeTransfer(address token, address to, uint256 value) internal {
+        (bool ok, bytes memory data) = token.call(
+            abi.encodeWithSelector(IERC20.transfer.selector, to, value)
+        );
+        require(ok && (data.length == 0 || abi.decode(data, (bool))), "JP: TRANSFER_FAILED");
     }
 }

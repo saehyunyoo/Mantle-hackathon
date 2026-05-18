@@ -34,13 +34,7 @@ contract JionPoolConstructorTest is Test {
         assertEq(uint256(ts), 0);
     }
 
-    // burn/swap still revert until follow-up PRs.
-    function test_BurnRevertsForNow() public {
-        JionPool pool = new JionPool(token0, token1);
-        vm.expectRevert("JionPool.burn: not implemented");
-        pool.burn(address(this));
-    }
-
+    // swap still reverts until follow-up PR.
     function test_SwapRevertsForNow() public {
         JionPool pool = new JionPool(token0, token1);
         vm.expectRevert("JionPool.swap: not implemented");
@@ -161,5 +155,110 @@ contract JionPoolMintTest is Test {
         (uint112 r0, uint112 r1,) = pool.getReserves();
         assertEq(uint256(r0), 7 ether);
         assertEq(uint256(r1), 11 ether);
+    }
+}
+
+contract JionPoolBurnTest is Test {
+    MockERC20 t0;
+    MockERC20 t1;
+    JionPool  pool;
+
+    address constant DEAD = 0x000000000000000000000000000000000000dEaD;
+    address alice = address(0xA11CE);
+
+    event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to);
+
+    function setUp() public {
+        t0 = new MockERC20("Token0", "T0");
+        t1 = new MockERC20("Token1", "T1");
+        pool = new JionPool(address(t0), address(t1));
+
+        // Seed pool with 1000 t0 + 4000 t1 LP from alice.
+        t0.mint(address(pool), 1000 ether);
+        t1.mint(address(pool), 4000 ether);
+        pool.mint(alice);
+        // alice now has ~2000e18 - 1000 LP shares.
+    }
+
+    /// Full burn returns all underlying minus the dust locked at DEAD.
+    function test_FullBurnReturnsProportional() public {
+        uint256 lpBalance = pool.balanceOf(alice);
+
+        // alice transfers LP back into the pool, then calls burn().
+        vm.prank(alice);
+        pool.transfer(address(pool), lpBalance);
+
+        uint256 expectedShare = lpBalance; // share of supply alice burns
+        uint256 totalSupplyBefore = pool.totalSupply();
+
+        // amount_out = balance * lpBalance / totalSupply
+        uint256 expectedAmount0 = (lpBalance * 1000 ether) / totalSupplyBefore;
+        uint256 expectedAmount1 = (lpBalance * 4000 ether) / totalSupplyBefore;
+
+        vm.expectEmit(true, false, false, true);
+        emit Burn(address(this), expectedAmount0, expectedAmount1, alice);
+
+        (uint256 a0, uint256 a1) = pool.burn(alice);
+
+        assertEq(a0, expectedAmount0, "amount0");
+        assertEq(a1, expectedAmount1, "amount1");
+        assertEq(t0.balanceOf(alice), a0, "alice t0");
+        assertEq(t1.balanceOf(alice), a1, "alice t1");
+
+        // DEAD still holds MINIMUM_LIQUIDITY — should never be redeemable.
+        assertEq(pool.balanceOf(DEAD), 1000);
+
+        // pool LP for alice now 0
+        assertEq(pool.balanceOf(alice), 0);
+
+        // reserves refreshed
+        (uint112 r0, uint112 r1,) = pool.getReserves();
+        assertEq(uint256(r0), 1000 ether - a0);
+        assertEq(uint256(r1), 4000 ether - a1);
+
+        expectedShare; // silence unused warning
+    }
+
+    /// Burning a partial position returns proportional amounts.
+    function test_PartialBurn() public {
+        uint256 half = pool.balanceOf(alice) / 2;
+        uint256 totalSupplyBefore = pool.totalSupply();
+
+        vm.prank(alice);
+        pool.transfer(address(pool), half);
+
+        uint256 expectedA0 = (half * 1000 ether) / totalSupplyBefore;
+        uint256 expectedA1 = (half * 4000 ether) / totalSupplyBefore;
+
+        (uint256 a0, uint256 a1) = pool.burn(alice);
+        assertEq(a0, expectedA0);
+        assertEq(a1, expectedA1);
+        assertEq(pool.balanceOf(alice), pool.balanceOf(alice)); // still has the other half
+        assertGt(pool.balanceOf(alice), 0);
+    }
+
+    /// Burning zero LP shares reverts (amount0/amount1 would be 0).
+    function test_RevertOnZeroLpInPool() public {
+        // No LP transferred into the pool — burn should revert.
+        vm.expectRevert(JionPool.InsufficientLiquidity.selector);
+        pool.burn(alice);
+    }
+
+    /// MINIMUM_LIQUIDITY dust at DEAD cannot be redeemed.
+    function test_MinimumLiquidityLockedForever() public {
+        // alice burns her full position.
+        uint256 lpBalance = pool.balanceOf(alice);
+        vm.prank(alice);
+        pool.transfer(address(pool), lpBalance);
+        pool.burn(alice);
+
+        // pool still has MINIMUM_LIQUIDITY at DEAD; total supply == 1000
+        assertEq(pool.totalSupply(), 1000);
+        assertEq(pool.balanceOf(DEAD), 1000);
+
+        // residual reserves are the locked-liquidity proportional dust
+        (uint112 r0, uint112 r1,) = pool.getReserves();
+        assertGt(uint256(r0), 0);
+        assertGt(uint256(r1), 0);
     }
 }
