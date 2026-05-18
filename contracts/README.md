@@ -1,44 +1,32 @@
 # Jion Contracts
 
-Foundry project for Jion smart contracts on Mantle Sepolia.
+Solidity + Foundry. Mantle (EVM L2).
 
-## Setup (one-time)
+**아직 init 안 됨.** Phase 1 컨트랙트 티켓 시작할 때 아래 명령으로 init.
 
-Install Foundry: https://book.getfoundry.sh/getting-started/installation
+## Init 가이드
 
 ```bash
+cd contracts
+forge init --no-git --no-commit .
 forge install OpenZeppelin/openzeppelin-contracts --no-commit
-forge install foundry-rs/forge-std --no-commit
+forge install pyth-network/pyth-sdk-solidity --no-commit
 ```
 
-## Build & Test
+## 예정 컨트랙트 (PLAN.md 부록 A)
 
-```bash
-forge build
-forge test -vv
+```
+src/
+├─ TokenFactory.sol      # ERC-20 합성토큰 발행
+├─ JionPool.sol          # Uniswap V2 fork AMM
+├─ OracleAdapter.sol     # Pyth 시세 어댑터
+├─ Settlement.sol        # 임계치 미달 시 강제 정산
+├─ AgentLogger.sol       # AI 의사결정 온체인 기록 (event emit)
+└─ JionRouter.sol        # 외부 진입점
 ```
 
-## Deploy to Mantle Sepolia
+## 배포
 
-```bash
-cp ../.env.example ../.env
-# fill DEPLOYER_PRIVATE_KEY and MANTLE_SEPOLIA_RPC
-
-source ../.env
-forge script script/Deploy.s.sol:DeployScript \
-  --rpc-url $MANTLE_SEPOLIA_RPC \
-  --broadcast \
-  --private-key $DEPLOYER_PRIVATE_KEY
-```
-
-After deploy, run from repo root: `bun run export-abi` to sync ABIs to web.
-
-## Contracts (planned)
-
-| File | Purpose |
-| --- | --- |
-| `TokenFactory.sol` | Deploys daily synthetic ERC-20 tokens |
-| `OracleAdapter.sol` | Pyth Network price feed wrapper |
-| `Settlement.sol` | Force-settle tokens below volume threshold |
-| `AgentLogger.sol` | On-chain log of AI agent decisions |
-| `Router.sol` | Entrypoint for external swaps |
+- 메인넷 1개 시장 (NASDAQ 후보) — 실제 거래
+- Sepolia 나머지 시장 — 데모 시각화
+- 배포 트랜잭션 서명은 사람(세현) 수동

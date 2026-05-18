@@ -3,14 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "description": "Daily auto-tokenization of top-volume stocks with AI routing on Mantle.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "cd web && bun run dev",
-    "build": "cd web && bun run build",
-    "lint": "cd web && bun run lint",
+    "dev": "bun --filter '@jion/web' dev",
+    "build": "bun --filter '@jion/web' build",
+    "lint": "bun --filter '*' lint",
+    "typecheck": "bun --filter '*' typecheck",
     "test:contracts": "cd contracts && forge test -vv",
-    "build:contracts": "cd contracts && forge build",
-    "export-abi": "bun run scripts/export-abi.ts",
-    "deploy:sepolia": "cd contracts && forge script script/Deploy.s.sol:DeployScript --rpc-url $MANTLE_SEPOLIA_RPC --broadcast --private-key $DEPLOYER_PRIVATE_KEY"
+    "build:contracts": "cd contracts && forge build"
   },
   "engines": {
     "bun": ">=1.1.0",

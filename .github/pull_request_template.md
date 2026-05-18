@@ -1,20 +1,26 @@
+## Ticket
+
+<!-- T1 ~ T6 또는 Phase 0 / 공유 -->
+
 ## What changed
 
-<!-- one-liner -->
+<!-- 한 줄 요약 -->
 
-## Area
+## Scope
 
-- [ ] `web/app/(public)` or `web/components` (FE — 영인)
-- [ ] `web/app/api` or `web/lib/{ai,db,jobs}` (API — 세현)
-- [ ] `contracts/` (Solidity — 세현)
-- [ ] `web/lib/{types,contracts}` (SHARED — needs review)
+- [ ] `apps/web/` (UI/페이지/컴포넌트)
+- [ ] `apps/web/app/api/` (API routes)
+- [ ] `apps/web/app/api/cron/` (cron jobs)
+- [ ] `contracts/` (Solidity)
+- [ ] `packages/types/` 또는 `packages/mocks/` (SHARED — 리뷰 필요)
 - [ ] `docs/` / root config
 
 ## Checklist
 
-- [ ] CI green (forge test + next build)
-- [ ] If shared types changed → 다른 사람에게 핑
-- [ ] If contracts changed → `bun run export-abi` 실행, ABI 함께 commit
-- [ ] PR size ≤ 1 day of work
+- [ ] `bun run typecheck` 통과
+- [ ] `bun run lint` 통과 (web 있으면)
+- [ ] contracts 바뀌면 `forge test` 통과
+- [ ] 공유 타입 수정 → 다른 담당자에게 핑
+- [ ] PR 사이즈 ≤ 1일치 작업
 
 ## Screenshots / Notes
