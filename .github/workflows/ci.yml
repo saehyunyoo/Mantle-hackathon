@@ -26,7 +26,8 @@ jobs:
         run: |
           forge install foundry-rs/forge-std --no-commit --no-git
           forge install OpenZeppelin/openzeppelin-contracts --no-commit --no-git
-          forge install pyth-network/pyth-sdk-solidity --no-commit --no-git
+          # Pyth SDK installed in W2 once a compatible release is pinned;
+          # for now we use the minimal local interface at src/interfaces/IPyth.sol.
 
       - name: Show versions
         run: forge --version

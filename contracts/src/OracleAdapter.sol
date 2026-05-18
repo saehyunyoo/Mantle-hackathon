@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { IPyth } from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
-import { PythStructs } from "@pythnetwork/pyth-sdk-solidity/PythStructs.sol";
+import { IPyth, PythStructs } from "./interfaces/IPyth.sol";
 
 /**
  * @title OracleAdapter — Pyth pull-oracle wrapper
