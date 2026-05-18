@@ -36,12 +36,12 @@ contract DeployScript is Script {
 
         vm.stopBroadcast();
 
-        console.log("=== Jion · Mantle Sepolia ===");
-        console.log("Deployer       :", deployer);
-        console.log("TokenFactory   :", address(factory));
-        console.log("OracleAdapter  :", address(oracle));
-        console.log("AgentLogger    :", address(logger));
-        console.log("JionRouter     :", address(router));
-        console.log("Pyth (mantle)  :", MANTLE_SEPOLIA_PYTH);
+        console.log("=== Jion - Mantle Sepolia ===");
+        console.log("Deployer:      ", deployer);
+        console.log("TokenFactory:  ", address(factory));
+        console.log("OracleAdapter: ", address(oracle));
+        console.log("AgentLogger:   ", address(logger));
+        console.log("JionRouter:    ", address(router));
+        console.log("Pyth (mantle): ", MANTLE_SEPOLIA_PYTH);
     }
 }
