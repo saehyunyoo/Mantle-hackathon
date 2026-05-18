@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 /**
  * @title Minimal Pyth interface — local copy
  *
- * NOTE: this is a minimal stand-in for `@pythnetwork/pyth-sdk-solidity/IPyth.sol`.
+ * NOTE: this is a minimal stand-in for the upstream pyth-sdk-solidity IPyth.
  * The upstream package ships with NatSpec tags that Solidity 0.8.24 rejects
  * when consumed via remappings inside this CI setup. To keep CI green and
  * unblock W2 work we inline only the parts of the interface we actually call.
