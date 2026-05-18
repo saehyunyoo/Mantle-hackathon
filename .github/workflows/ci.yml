@@ -22,8 +22,10 @@ jobs:
         with:
           version: nightly
 
-      - name: Install OpenZeppelin
-        run: forge install OpenZeppelin/openzeppelin-contracts --no-commit --no-git || true
+      - name: Install dependencies
+        run: |
+          forge install foundry-rs/forge-std --no-commit --no-git
+          forge install OpenZeppelin/openzeppelin-contracts --no-commit --no-git
 
       - name: Show forge version
         run: forge --version
