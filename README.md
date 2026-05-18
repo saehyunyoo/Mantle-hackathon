@@ -35,7 +35,7 @@ docs/                    # 기획서, 데모 시나리오, mockup
 
 | Layer | Tool |
 | --- | --- |
-| Chain | Mantle (메인넷 1개 시장 / Sepolia 나머지) |
+| Chain | **Mantle Sepolia** (테스트넷 우선) · 메인넷은 제출 후 스트레치 |
 | Contracts | Solidity + Foundry |
 | AMM | Fluxion / Merchant Moe / Agni (라우팅 대상) |
 | Oracle | Pyth Network |
@@ -63,17 +63,18 @@ docs/                    # 기획서, 데모 시나리오, mockup
 | T2 | AI 라우팅 스왑 UI + API + 컨트랙트 호출 | **영인** |
 | T3 | AI LP 옵티마이저 UI + API + 컨트랙트 호출 | **영인** |
 | T4 | 스냅샷 잡 (cron + Polygon.io + Supabase) | **세현** |
-| T5 | 토큰 자동 발행 잡 (TokenFactory 호출 + 메인넷 서명) | **세현** |
-| T6 | 강제 정산 잡 (volume-check → Settlement → USDC 분배) | **세현** |
+| T5 | 토큰 자동 발행 잡 (TokenFactory 호출 + **Sepolia 배포/서명**) | **세현** |
+| T6 | 강제 정산 잡 (volume-check → Settlement → USDC 분배, Sepolia) | **세현** |
 
 티켓 안에선 mocks 써서 UI 먼저 만들고, 실제 백엔드/컨트랙트 붙으면 swap. 의존성 충돌 최소화.
 
 ### Claude가 못 하는 부분 (사람 필수)
 
-- 메인넷 컨트랙트 배포 트랜잭션 서명
-- 외부 API 키 발급/결제 (Polygon.io, Z.ai)
+- Sepolia 컨트랙트 배포 트랜잭션 서명 (faucet 가스)
+- 외부 API 키 발급/결제 (Polygon.io, Anthropic, Supabase)
 - AI 에이전트 지갑 키 관리
 - 데모 데이 라이브 시연
+- (스트레치) 제출 후 메인넷 배포 USDC 시드 + 가스
 
 ---
 
