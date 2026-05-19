@@ -40,15 +40,10 @@ contract JionRouter {
         uint256 amount1,
         uint256 liquidity
     );
-    event SwapExecuted(
-        address indexed pool,
-        address indexed sender,
-        address tokenIn,
-        address tokenOut,
-        uint256 amountIn,
-        uint256 amountOut,
-        address indexed to
-    );
+    // SwapExecuted intentionally omitted — JionPool.Swap already emits all of
+    // (sender, amount0In, amount1In, amount0Out, amount1Out, to). The router
+    // adding another event causes Solidity stack-too-deep at 0.8.24 without
+    // via-IR. Indexers can correlate by the pool address.
 
     error PoolNotFound();
     error PoolAlreadyExists();
@@ -157,8 +152,7 @@ contract JionRouter {
             ? (amountOut, uint256(0))
             : (uint256(0), amountOut);
         JionPool(pool).swap(out0, out1, to);
-
-        emit SwapExecuted(pool, msg.sender, tokenIn, tokenOut, amountIn, amountOut, to);
+        // Pool emits Swap(sender, amount0In, amount1In, amount0Out, amount1Out, to)
     }
 
     // -----------------------------------------------------------------------
