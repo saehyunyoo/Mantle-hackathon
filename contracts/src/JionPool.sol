@@ -150,14 +150,86 @@ contract JionPool is ERC20, ReentrancyGuard {
         emit Burn(msg.sender, amount0, amount1, to);
     }
 
-    /// @notice Swap with explicit out amounts. Caller must pre-deposit input.
-    /// @dev TODO(W2): implement swap() with 0.3% fee + x*y=k check — separate PR.
+    /**
+     * @notice V2-style constant-product swap with 0.3% LP fee.
+     *
+     * Pattern (must be done by router atomically):
+     *   1. Caller transfers `amountIn` of input token to this pool.
+     *   2. Caller calls `swap(amount0Out, amount1Out, to)` with the
+     *      pre-computed output amount (see `getAmountOut`).
+     *   3. Pool optimistically sends `amountXOut` to `to`, then verifies
+     *      the constant-product invariant including the 0.3% fee.
+     *
+     * Invariant (V2 standard, fee = 30 bps):
+     *   (balance0 * 1000 - amount0In * FEE_BPS) *
+     *   (balance1 * 1000 - amount1In * FEE_BPS)
+     *     >= reserve0 * reserve1 * 1_000_000
+     *
+     * @param amount0Out amount of token0 to send out (0 if buying token0)
+     * @param amount1Out amount of token1 to send out (0 if buying token1)
+     * @param to recipient of the output token
+     */
     function swap(uint256 amount0Out, uint256 amount1Out, address to)
         external
         nonReentrant
     {
-        amount0Out; amount1Out; to;
-        revert("JionPool.swap: not implemented");
+        if (amount0Out == 0 && amount1Out == 0) revert InsufficientOutput();
+        uint112 _reserve0 = reserve0;
+        uint112 _reserve1 = reserve1;
+        if (amount0Out >= _reserve0 || amount1Out >= _reserve1) {
+            revert InsufficientLiquidity();
+        }
+
+        // Send out first (optimistic), then validate against post-balances.
+        if (amount0Out > 0) _safeTransfer(token0, to, amount0Out);
+        if (amount1Out > 0) _safeTransfer(token1, to, amount1Out);
+
+        uint256 balance0 = IERC20(token0).balanceOf(address(this));
+        uint256 balance1 = IERC20(token1).balanceOf(address(this));
+
+        // Infer how much of each token was deposited by the caller before the call.
+        uint256 amount0In = balance0 + amount0Out > uint256(_reserve0)
+            ? balance0 + amount0Out - uint256(_reserve0)
+            : 0;
+        uint256 amount1In = balance1 + amount1Out > uint256(_reserve1)
+            ? balance1 + amount1Out - uint256(_reserve1)
+            : 0;
+        if (amount0In == 0 && amount1In == 0) revert InsufficientInput();
+
+        // Adjusted balances net of fee — invariant must hold against old reserves.
+        uint256 balance0Adjusted = balance0 * 1000 - amount0In * uint256(FEE_BPS);
+        uint256 balance1Adjusted = balance1 * 1000 - amount1In * uint256(FEE_BPS);
+        if (
+            balance0Adjusted * balance1Adjusted
+                < uint256(_reserve0) * uint256(_reserve1) * (1000 * 1000)
+        ) {
+            revert K();
+        }
+
+        _update(balance0, balance1);
+        emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
+    }
+
+    /**
+     * @notice Pure quote helper — given an input amount and pair reserves,
+     *         return how much output the pool would give after the 0.3% fee.
+     *
+     * Formula (V2):
+     *   amountInWithFee = amountIn * (1000 - FEE_BPS)
+     *   amountOut       = amountInWithFee * reserveOut
+     *                       / (reserveIn * 1000 + amountInWithFee)
+     */
+    function getAmountOut(
+        uint256 amountIn,
+        uint256 reserveIn,
+        uint256 reserveOut
+    ) public pure returns (uint256 amountOut) {
+        if (amountIn == 0) revert InsufficientInput();
+        if (reserveIn == 0 || reserveOut == 0) revert InsufficientLiquidity();
+        uint256 amountInWithFee = amountIn * (1000 - uint256(30)); // FEE_BPS hard-cast for pure
+        uint256 numerator = amountInWithFee * reserveOut;
+        uint256 denominator = reserveIn * 1000 + amountInWithFee;
+        amountOut = numerator / denominator;
     }
 
     /// @notice Force reserves to match actual balances (e.g. after donation).
