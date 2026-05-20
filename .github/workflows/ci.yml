@@ -20,7 +20,9 @@ jobs:
 
       - uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          # Pinned to stable — recent nightly's forge_lint pass SIGSEGVs
+          # on `forge build --sizes` for our codebase. Revisit later.
+          version: stable
 
       - name: Install dependencies
         run: |
