@@ -6,6 +6,8 @@ import { TokenFactory } from "../src/TokenFactory.sol";
 import { OracleAdapter } from "../src/OracleAdapter.sol";
 import { AgentLogger } from "../src/AgentLogger.sol";
 import { JionRouter } from "../src/JionRouter.sol";
+import { Distributor } from "../src/Distributor.sol";
+import { SelfPoolAdapter } from "../src/adapters/SelfPoolAdapter.sol";
 
 /**
  * @notice Deploy core Jion contracts to Mantle Sepolia.
@@ -33,15 +35,22 @@ contract DeployScript is Script {
         OracleAdapter oracle = new OracleAdapter(MANTLE_SEPOLIA_PYTH);
         AgentLogger logger = new AgentLogger(deployer);
         JionRouter router  = new JionRouter(deployer);
+        Distributor dist   = new Distributor(deployer);
+        SelfPoolAdapter selfAdapter = new SelfPoolAdapter(router, address(dist));
+
+        // Register SelfPoolAdapter as the Phase-1 active venue.
+        dist.addAdapter(address(selfAdapter));
 
         vm.stopBroadcast();
 
         console.log("=== Jion - Mantle Sepolia ===");
-        console.log("Deployer:      ", deployer);
-        console.log("TokenFactory:  ", address(factory));
-        console.log("OracleAdapter: ", address(oracle));
-        console.log("AgentLogger:   ", address(logger));
-        console.log("JionRouter:    ", address(router));
-        console.log("Pyth (mantle): ", MANTLE_SEPOLIA_PYTH);
+        console.log("Deployer:       ", deployer);
+        console.log("TokenFactory:   ", address(factory));
+        console.log("OracleAdapter:  ", address(oracle));
+        console.log("AgentLogger:    ", address(logger));
+        console.log("JionRouter:     ", address(router));
+        console.log("Distributor:    ", address(dist));
+        console.log("SelfPoolAdapter:", address(selfAdapter));
+        console.log("Pyth (mantle):  ", MANTLE_SEPOLIA_PYTH);
     }
 }
