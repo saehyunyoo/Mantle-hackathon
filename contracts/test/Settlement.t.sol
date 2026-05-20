@@ -8,11 +8,14 @@ import { IJionAdapter } from "../src/adapters/IJionAdapter.sol";
 import { MockERC20 } from "./mocks/MockERC20.sol";
 
 /**
- * Configurable adapter for Settlement tests:
- *  - volume24h() returns a controllable value
- *  - withdraw(positionId) returns pre-set (token, quote) amounts AND transfers
- *    them to msg.sender (the Settlement contract) so the contract can take
- *    the fee + custody the rest.
+ * Configurable adapter: returns pre-set (token, quote) amounts on withdraw
+ * AND transfers them from its own balance to msg.sender (Settlement).
+ *
+ * Setup pattern in tests:
+ *   1. mint token + usdc directly to the adapter (simulating what it would
+ *      hold via list()).
+ *   2. configureWithdraw to declare how much it will return.
+ *   3. forceSettle → adapter.withdraw transfers from adapter to Settlement.
  */
 contract VenueAdapter is IJionAdapter {
     string public override name;
@@ -46,26 +49,32 @@ contract VenueAdapter is IJionAdapter {
         configuredVolume = v;
     }
 
-    function list(address, address, uint256, uint256)
-        external
-        returns (bytes32 positionId)
-    {
-        positionId = keccak256(abi.encodePacked(address(this), block.timestamp));
+    function list(address, address, uint256, uint256) external returns (bytes32 positionId) {
+        positionId = keccak256(abi.encodePacked(address(this), block.timestamp, withdrawCallCount));
         lastPositionId = positionId;
         return positionId;
     }
 
+    /// @dev Transfers from the adapter's own balance — caller must have
+    ///      pre-funded the adapter with both tokens.
     function withdraw(bytes32 positionId)
         external
         returns (uint256 amountTokenOut, uint256 amountQuoteOut)
     {
         positionId; // silence
         withdrawCallCount++;
+
         if (withdrawAmountToken > 0) {
-            MockERC20(tokenContract).mint(msg.sender, withdrawAmountToken);
+            require(
+                MockERC20(tokenContract).transfer(msg.sender, withdrawAmountToken),
+                "venue: token transfer failed"
+            );
         }
         if (withdrawAmountQuote > 0) {
-            MockERC20(quoteContract).mint(msg.sender, withdrawAmountQuote);
+            require(
+                MockERC20(quoteContract).transfer(msg.sender, withdrawAmountQuote),
+                "venue: quote transfer failed"
+            );
         }
         return (withdrawAmountToken, withdrawAmountQuote);
     }
@@ -82,34 +91,17 @@ contract VenueAdapter is IJionAdapter {
 contract SettlementTest is Test {
     Distributor dist;
     Settlement settlement;
-    MockERC20 token;       // mock JionToken (e.g. mNVDA)
-    MockERC20 usdc;        // mock USDC (6 decimals would be ideal but using 18 for simpler math)
+    MockERC20 token;
+    MockERC20 usdc;
     VenueAdapter venueA;
     VenueAdapter venueB;
 
     address owner = address(0xA11CE);
     address feeVault = address(0xFEE5);
     address holder1 = address(0xBABE);
-    address holder2 = address(0xCAFE);
 
-    /// Helper: oracle says 1 mNVDA = 100 USDC, in (USDC base-units per 1e18 token).
-    uint256 constant ORACLE_PRICE = 100 ether; // 100 USDC * 1e18 / 1e18 token = 100e18
-
-    event Settled(
-        address indexed token,
-        uint256 totalVolume24h,
-        uint256 oraclePriceUsdc,
-        uint256 grossUsdc,
-        uint256 feeUsdc,
-        uint256 netUsdc,
-        uint256 timestamp
-    );
-    event Claimed(
-        address indexed token,
-        address indexed holder,
-        uint256 tokenAmount,
-        uint256 usdcPayout
-    );
+    /// Oracle price stamped for display (USDC per 1e18 token).
+    uint256 constant ORACLE_PRICE = 100 ether;
 
     function setUp() public {
         vm.startPrank(owner);
@@ -123,7 +115,8 @@ contract SettlementTest is Test {
         dist.addAdapter(address(venueA));
         dist.addAdapter(address(venueB));
 
-        // Pre-fund Distributor and run distribute() so positionOf[token][venue] is set.
+        // Mint to the Distributor so distribute() can fan tokens out.
+        // We pretend the token has totalSupply = 1_000 (all initially with Distributor).
         token.mint(address(dist), 1_000 ether);
         usdc.mint(address(dist), 1_000 ether);
 
@@ -155,7 +148,7 @@ contract SettlementTest is Test {
     // -------------------------------------------------------------------
 
     function test_RevertWhenVolumeAboveThreshold() public {
-        venueA.setVolume(11_000 * 1e6); // > $10K
+        venueA.setVolume(11_000 * 1e6);
         vm.prank(owner);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -168,30 +161,35 @@ contract SettlementTest is Test {
     }
 
     function test_ForceSettleHappyPath() public {
-        // Volumes well under $10K → settle is allowed.
         venueA.setVolume(2_000 * 1e6);
         venueB.setVolume(3_000 * 1e6);
 
-        // Configure venues to return some token + USDC on withdraw.
-        // venue A: 60 token + 100 USDC ; venue B: 40 token + 80 USDC
+        // Venue A holds 600 token + 600 USDC from distribute().
+        // Make A return 60 token + 100 USDC and B return 40 + 80.
         venueA.configureWithdraw(address(token), address(usdc), 60 ether, 100 ether);
         venueB.configureWithdraw(address(token), address(usdc), 40 ether, 80 ether);
 
         vm.prank(owner);
         settlement.forceSettle(address(token), ORACLE_PRICE);
 
-        // tokenAsUsdc per venue = amountToken * price / 1e18
-        //   A: 60e18 * 100e18 / 1e18 = 6000e18
-        //   B: 40e18 * 100e18 / 1e18 = 4000e18
-        // gross = (6000+4000) + (100+80) = 10_180e18
-        uint256 gross = 10_180 ether;
-        uint256 fee = (gross * 50) / 10_000; // 0.5% = 50.9e18
-        uint256 net = gross - fee;
+        // Recovered: 100 token + 180 USDC.
+        // fee = 180e18 * 50 / 10000 = 0.9e18
+        uint256 fee = (180 ether * 50) / 10_000;
+        uint256 netUsdc = 180 ether - fee;
 
-        assertEq(settlement.settlementPriceUsdc(address(token)), ORACLE_PRICE);
         assertEq(settlement.settled(address(token)), true);
-        assertEq(settlement.settlementPool(address(token)), net);
+        assertEq(settlement.settlementPriceUsdc(address(token)), ORACLE_PRICE);
+        assertEq(settlement.settlementPool(address(token)), netUsdc);
         assertEq(usdc.balanceOf(feeVault), fee);
+
+        // circulating = totalSupply - recoveredToken = 1000 - 100 = 900
+        assertEq(settlement.circulatingAtSettle(address(token)), 900 ether);
+
+        // Settlement now holds the recovered tokens + (net) USDC.
+        assertEq(token.balanceOf(address(settlement)), 100 ether);
+        assertEq(usdc.balanceOf(address(settlement)), netUsdc);
+
+        // Both adapters were called once.
         assertEq(venueA.withdrawCallCount(), 1);
         assertEq(venueB.withdrawCallCount(), 1);
     }
@@ -204,7 +202,6 @@ contract SettlementTest is Test {
 
         vm.startPrank(owner);
         settlement.forceSettle(address(token), ORACLE_PRICE);
-
         vm.expectRevert(
             abi.encodeWithSelector(Settlement.AlreadySettled.selector, address(token))
         );
@@ -213,9 +210,7 @@ contract SettlementTest is Test {
     }
 
     function test_RevertOnNoVenues() public {
-        // A token that was never distributed.
         MockERC20 ghost = new MockERC20("ghost", "G");
-
         vm.prank(owner);
         vm.expectRevert(
             abi.encodeWithSelector(Settlement.NoVenues.selector, address(ghost))
@@ -230,36 +225,46 @@ contract SettlementTest is Test {
     }
 
     // -------------------------------------------------------------------
-    // claim path
+    // claim path — pro-rata of recovered USDC by circulating share
     // -------------------------------------------------------------------
 
-    function test_HolderClaimPaysOutByOraclePrice() public {
+    function _settleWithRecovery() internal {
         venueA.setVolume(2_000 * 1e6);
         venueB.setVolume(3_000 * 1e6);
         venueA.configureWithdraw(address(token), address(usdc), 60 ether, 100 ether);
         venueB.configureWithdraw(address(token), address(usdc), 40 ether, 80 ether);
-
         vm.prank(owner);
         settlement.forceSettle(address(token), ORACLE_PRICE);
+    }
 
-        // Give holder1 some tokens (representing pre-settlement balance).
-        token.mint(holder1, 5 ether);
+    function test_HolderClaimProRata() public {
+        _settleWithRecovery();
+
+        // Give holder1 some tokens (simulate pre-settle balance from circulating supply).
+        // We mint extra — totalSupply now climbs but circulatingAtSettle was stamped earlier
+        // at 900, so the pro-rata math uses 900 even if we mint after.
+        token.mint(holder1, 90 ether); // 10% of circulating snapshot
+
+        uint256 poolBefore = settlement.settlementPool(address(token));
+        // expected = balance * pool / circ = 90e18 * 179.1e18 / 900e18 = 17.91e18
+        uint256 expected = (90 ether * poolBefore) / 900 ether;
 
         vm.startPrank(holder1);
-        token.approve(address(settlement), 5 ether);
+        token.approve(address(settlement), 90 ether);
         uint256 received = settlement.claim(address(token));
         vm.stopPrank();
 
-        // expected = 5e18 * 100e18 / 1e18 = 500e18
-        assertEq(received, 500 ether);
-        assertEq(usdc.balanceOf(holder1), 500 ether);
+        assertEq(received, expected);
+        assertEq(usdc.balanceOf(holder1), expected);
         assertEq(token.balanceOf(holder1), 0);
-        assertEq(token.balanceOf(address(settlement)), 5 ether);
+
+        // Pool + circ decremented.
+        assertEq(settlement.settlementPool(address(token)), poolBefore - expected);
+        assertEq(settlement.circulatingAtSettle(address(token)), 900 ether - 90 ether);
     }
 
     function test_ClaimBeforeSettleReverts() public {
         token.mint(holder1, 1 ether);
-
         vm.startPrank(holder1);
         token.approve(address(settlement), 1 ether);
         vm.expectRevert(
@@ -269,38 +274,35 @@ contract SettlementTest is Test {
         vm.stopPrank();
     }
 
-    function test_ClaimDeductsFromPool() public {
-        venueA.setVolume(2_000 * 1e6);
-        venueB.setVolume(3_000 * 1e6);
-        venueA.configureWithdraw(address(token), address(usdc), 60 ether, 100 ether);
-        venueB.configureWithdraw(address(token), address(usdc), 40 ether, 80 ether);
-
-        vm.prank(owner);
-        settlement.forceSettle(address(token), ORACLE_PRICE);
-
-        uint256 poolBefore = settlement.settlementPool(address(token));
-        token.mint(holder1, 3 ether);
-
-        vm.startPrank(holder1);
-        token.approve(address(settlement), 3 ether);
-        settlement.claim(address(token));
-        vm.stopPrank();
-
-        assertEq(settlement.settlementPool(address(token)), poolBefore - 300 ether);
-    }
-
     function test_ZeroBalanceClaimIsNoOp() public {
-        venueA.setVolume(2_000 * 1e6);
-        venueB.setVolume(3_000 * 1e6);
-        venueA.configureWithdraw(address(token), address(usdc), 1 ether, 1 ether);
-        venueB.configureWithdraw(address(token), address(usdc), 1 ether, 1 ether);
-
-        vm.prank(owner);
-        settlement.forceSettle(address(token), ORACLE_PRICE);
-
-        // holder1 has no tokens
+        _settleWithRecovery();
         vm.prank(holder1);
         uint256 received = settlement.claim(address(token));
         assertEq(received, 0);
+    }
+
+    function test_TwoHoldersTotalToPool() public {
+        _settleWithRecovery();
+        uint256 poolBefore = settlement.settlementPool(address(token));
+
+        // holder1 gets 90, holder2 gets 90 ether.
+        address holder2 = address(0xCAFE);
+        token.mint(holder1, 90 ether);
+        token.mint(holder2, 90 ether);
+
+        vm.startPrank(holder1);
+        token.approve(address(settlement), 90 ether);
+        uint256 got1 = settlement.claim(address(token));
+        vm.stopPrank();
+
+        vm.startPrank(holder2);
+        token.approve(address(settlement), 90 ether);
+        uint256 got2 = settlement.claim(address(token));
+        vm.stopPrank();
+
+        // Each gets ~10% of pool. Together ~20%.
+        assertEq(got1 + got2, (poolBefore * 180 ether) / 900 ether);
+        assertGt(got1, 0);
+        assertGt(got2, 0);
     }
 }

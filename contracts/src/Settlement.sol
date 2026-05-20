@@ -10,33 +10,38 @@ import { Distributor } from "./Distributor.sol";
 /**
  * @title Settlement — force-settle low-volume tokens across all adapters
  *
- * Demo scenario 4 (per docs/DEMO.md): if a token's combined 24-hour volume
- * across all venues falls below the threshold, this contract:
+ * Demo scenario 4: if a token's combined 24-hour volume across all venues
+ * falls below the threshold, this contract:
  *   1. yanks the position back from every adapter (LP / collateral / lending)
- *   2. computes the oracle USD price at settlement
- *   3. takes the 0.5% protocol fee
- *   4. holds the recovered USDC for token holders to claim
+ *   2. takes the 0.5% protocol fee on the recovered USDC
+ *   3. records `settlementPool` = (recoveredUSDC - fee)
+ *   4. records `circulatingAtSettle` = totalSupply - recoveredToken
+ *   5. holders pro-rata claim: (balance / circulatingAtSettle) * settlementPool
+ *
+ * Why pro-rata on the *real* recovered USDC instead of oracle * balance:
+ *   - guarantees the contract is always solvent (it can only pay out what
+ *     it has actually received from adapter withdrawals)
+ *   - oracle price is still stamped for display / off-chain UIs that want
+ *     to show "settled at $X per token"
+ *   - if reality matches the oracle the two numbers converge; if reality
+ *     diverges (slippage, IL, partial recovery) holders share the haircut
+ *     proportionally — same fairness model as Uniswap V2 LP burn.
  *
  * Holder claim flow:
- *   - holder approves Settlement for their token balance
- *   - calls claim(token) → returns balance × settlementPrice in USDC
- *   - token moves into Settlement custody (effectively retired)
- *
- * Why "claim" instead of push-distribute:
- *   - holder list = O(N) Transfer events to walk on-chain; expensive
- *   - claim is lazy + gas-fair (each holder pays their own gas)
- *   - simpler ownership (no need to make Settlement = TokenFactory owner)
+ *   - approve Settlement for token balance
+ *   - call claim(token)
+ *   - get (balance / circulatingAtSettle) * settlementPool USDC
+ *   - your token moves into Settlement custody (retired)
  */
 contract Settlement is Ownable, ReentrancyGuard {
-    /// @notice Mock-or-real USDC contract (Sepolia: mock USDC on Mantle Sepolia).
+    /// @notice USDC contract used to pay holders out. On Sepolia: a mock.
     address public immutable usdc;
     Distributor public immutable distributor;
 
-    /// @notice Where the 0.5% protocol fee goes.
+    /// @notice 0.5% protocol fee target.
     address public feeVault;
 
-    /// @notice 24h USD-volume threshold for staying alive (USDC has 6 decimals
-    ///         on most testnets / Mantle mainnet → $10_000 = 10_000 * 1e6).
+    /// @notice 24h USD-volume threshold for staying alive.
     uint256 public constant THRESHOLD_USDC = 10_000 * 1e6;
 
     /// @notice Protocol fee in basis points (50 = 0.5%).
@@ -45,20 +50,26 @@ contract Settlement is Ownable, ReentrancyGuard {
     /// @notice Whether a token has been settled. Once settled, irreversible.
     mapping(address => bool) public settled;
 
-    /// @notice settlementPriceUsdc[token] = USDC payout per 1e18 token units
-    ///         (i.e. amount of USDC base-units a holder gets per 1.0 token).
+    /// @notice Oracle price stamped at settle (display only — actual payout
+    ///         comes from settlementPool / circulatingAtSettle).
     mapping(address => uint256) public settlementPriceUsdc;
 
-    /// @notice settlementPool[token] = total USDC reserved for that token's holders.
+    /// @notice USDC reserved for holders of this token (after fee).
     mapping(address => uint256) public settlementPool;
+
+    /// @notice Token amount in circulation at settle (totalSupply minus what
+    ///         was already custodied by adapters). Used as denominator in claim.
+    mapping(address => uint256) public circulatingAtSettle;
 
     event Settled(
         address indexed token,
         uint256 totalVolume24h,
         uint256 oraclePriceUsdc,
-        uint256 grossUsdc,
+        uint256 recoveredUsdc,
+        uint256 recoveredToken,
         uint256 feeUsdc,
         uint256 netUsdc,
+        uint256 circulating,
         uint256 timestamp
     );
 
@@ -91,13 +102,9 @@ contract Settlement is Ownable, ReentrancyGuard {
     }
 
     // -----------------------------------------------------------------------
-    // Force settle
+    // Aggregate view
     // -----------------------------------------------------------------------
 
-    /**
-     * @notice Sum 24h volume across every adapter `token` is distributed to.
-     *         View helper for off-chain monitoring + cron decision.
-     */
     function totalVolume24h(address token) public view returns (uint256 total) {
         address[] memory venues = distributor.venuesOf(token);
         for (uint256 i = 0; i < venues.length; i++) {
@@ -105,13 +112,15 @@ contract Settlement is Ownable, ReentrancyGuard {
         }
     }
 
+    // -----------------------------------------------------------------------
+    // Force settle
+    // -----------------------------------------------------------------------
+
     /**
-     * @notice Pull `token` back from every adapter, lock USDC for claims.
+     * @notice Force-settle `token`. Owner only.
      *
      * @param token           the JionToken to settle
-     * @param oraclePriceUsdc USDC payout per 1e18 token (computed off-chain
-     *                        using Pyth right before this call). Caller is
-     *                        responsible for fresh price.
+     * @param oraclePriceUsdc stamped for display; not used for payouts
      */
     function forceSettle(address token, uint256 oraclePriceUsdc)
         external
@@ -126,44 +135,50 @@ contract Settlement is Ownable, ReentrancyGuard {
         address[] memory venues = distributor.venuesOf(token);
         if (venues.length == 0) revert NoVenues(token);
 
-        uint256 recoveredUsdc;
-        for (uint256 i = 0; i < venues.length; i++) {
-            recoveredUsdc += _withdrawFromVenue(token, venues[i], oraclePriceUsdc);
-        }
+        (uint256 recoveredToken, uint256 recoveredUsdc) =
+            _unwindAllVenues(token, venues);
 
         uint256 fee = (recoveredUsdc * uint256(FEE_BPS)) / 10_000;
         uint256 netUsdc = recoveredUsdc - fee;
-
         if (fee > 0) _safeTransferOut(usdc, feeVault, fee);
+
+        uint256 totalSupply_ = IERC20(token).totalSupply();
+        uint256 circ = totalSupply_ > recoveredToken
+            ? totalSupply_ - recoveredToken
+            : 0;
 
         settled[token] = true;
         settlementPriceUsdc[token] = oraclePriceUsdc;
         settlementPool[token] = netUsdc;
+        circulatingAtSettle[token] = circ;
 
-        emit Settled(token, vol, oraclePriceUsdc, recoveredUsdc, fee, netUsdc, block.timestamp);
+        emit Settled(
+            token,
+            vol,
+            oraclePriceUsdc,
+            recoveredUsdc,
+            recoveredToken,
+            fee,
+            netUsdc,
+            circ,
+            block.timestamp
+        );
     }
 
-    /**
-     * @dev Pull a single adapter position back, convert any received `token`
-     *      into a USDC-equivalent amount using the oracle price.
-     *
-     *      Returns the *USDC equivalent* recovered from this venue. The
-     *      adapter is expected to send the actual token + quote back to
-     *      this Settlement contract (the caller of `withdraw`).
-     */
-    function _withdrawFromVenue(address token, address venue, uint256 oraclePriceUsdc)
+    /// @dev Pull positions back from every venue. Extracted to keep stack
+    ///      depth manageable.
+    function _unwindAllVenues(address token, address[] memory venues)
         internal
-        returns (uint256 usdcEquivalent)
+        returns (uint256 totalToken, uint256 totalQuote)
     {
-        bytes32 positionId = distributor.positionOf(token, venue);
-        if (positionId == bytes32(0)) return 0;
-
-        (uint256 amountToken, uint256 amountQuote) =
-            IJionAdapter(venue).withdraw(positionId);
-
-        // amountQuote is already USDC; amountToken needs oracle conversion.
-        uint256 tokenAsUsdc = (amountToken * oraclePriceUsdc) / 1e18;
-        usdcEquivalent = tokenAsUsdc + amountQuote;
+        for (uint256 i = 0; i < venues.length; i++) {
+            bytes32 positionId = distributor.positionOf(token, venues[i]);
+            if (positionId == bytes32(0)) continue;
+            (uint256 amountToken, uint256 amountQuote) =
+                IJionAdapter(venues[i]).withdraw(positionId);
+            totalToken += amountToken;
+            totalQuote += amountQuote;
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -171,8 +186,8 @@ contract Settlement is Ownable, ReentrancyGuard {
     // -----------------------------------------------------------------------
 
     /**
-     * @notice Holder calls claim(token) after Settlement is done.
-     *         Holder must approve Settlement for their full token balance first.
+     * @notice Holder calls claim(token) after settle. Approve first.
+     * @return usdcOut total USDC paid to the holder.
      */
     function claim(address token) external nonReentrant returns (uint256 usdcOut) {
         if (!settled[token]) revert NotSettled(token);
@@ -180,16 +195,16 @@ contract Settlement is Ownable, ReentrancyGuard {
         uint256 balance = IERC20(token).balanceOf(msg.sender);
         if (balance == 0) return 0;
 
-        // Pull holder's tokens into Settlement custody (effectively retired).
-        _safeTransferFrom(token, msg.sender, address(this), balance);
+        uint256 circ = circulatingAtSettle[token];
+        if (circ == 0) return 0;
 
-        usdcOut = (balance * settlementPriceUsdc[token]) / 1e18;
-        if (usdcOut > settlementPool[token]) {
-            // Edge case: dust accumulates because of rounding. Cap to pool.
-            usdcOut = settlementPool[token];
-        }
+        usdcOut = (balance * settlementPool[token]) / circ;
+        if (usdcOut > settlementPool[token]) usdcOut = settlementPool[token];
+
         settlementPool[token] -= usdcOut;
+        circulatingAtSettle[token] -= balance;
 
+        _safeTransferFrom(token, msg.sender, address(this), balance);
         _safeTransferOut(usdc, msg.sender, usdcOut);
 
         emit Claimed(token, msg.sender, balance, usdcOut);
