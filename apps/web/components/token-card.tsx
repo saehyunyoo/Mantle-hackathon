@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type {
   DeFiListing,
   MarketCode,
@@ -114,10 +115,20 @@ export function TokenCard({
       </div>
 
       <div className="mb-4">
-        <div className="mb-2 text-[10px] uppercase tracking-wider text-zinc-500">
-          {distribution
-            ? `Routed to ${distribution.listings.length} venue${distribution.listings.length === 1 ? "" : "s"}`
-            : "Routing pending"}
+        <div className="mb-2 flex items-center justify-between gap-2 text-[10px] uppercase tracking-wider text-zinc-500">
+          <span>
+            {distribution
+              ? `Smart-routed to ${distribution.listings.length} venue${distribution.listings.length === 1 ? "" : "s"}`
+              : "Routing soon"}
+          </span>
+          {distribution && (
+            <Link
+              href={`/route/${encodeURIComponent(distribution.tokenSymbol)}`}
+              className="font-normal normal-case tracking-normal text-violet-300 hover:text-violet-200"
+            >
+              View routing →
+            </Link>
+          )}
         </div>
         {distribution ? (
           <div className="flex flex-wrap gap-1.5">
