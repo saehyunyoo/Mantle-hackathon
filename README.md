@@ -35,7 +35,7 @@ docs/                    # 기획서, 데모 시나리오, mockup
 
 | Layer | Tool |
 | --- | --- |
-| Chain | Mantle (메인넷 1개 시장 / Sepolia 나머지) |
+| Chain | **Mantle Sepolia** (테스트넷 우선) · 메인넷은 제출 후 스트레치 |
 | Contracts | Solidity + Foundry |
 | AMM | Fluxion / Merchant Moe / Agni (라우팅 대상) |
 | Oracle | Pyth Network |
@@ -59,21 +59,26 @@ docs/                    # 기획서, 데모 시나리오, mockup
 
 | ID | 티켓 (풀스택) | 담당 |
 |---|---|---|
-| T1 | 오늘의 핫스톡 대시보드 (Top 10 카드 + 시장별 탭) | **영인** |
-| T2 | AI 라우팅 스왑 UI + API + 컨트랙트 호출 | **영인** |
-| T3 | AI LP 옵티마이저 UI + API + 컨트랙트 호출 | **영인** |
+| T1 | Trade today's trend — 오늘 발행 토큰 카탈로그 (시장별 탭 + 분배된 DeFi 칩) | **영인** |
+| T2 | AI Distribution Routing — 토큰별 "왜 이 DeFi에 갔는지" 설명 화면 | **영인** |
+| T3 | Cross-DeFi Performance — 분배된 토큰들의 프로토콜별 TVL/Volume 통합 대시보드 | **영인** |
 | T4 | 스냅샷 잡 (cron + Polygon.io + Supabase) | **세현** |
-| T5 | 토큰 자동 발행 잡 (TokenFactory 호출 + 메인넷 서명) | **세현** |
-| T6 | 강제 정산 잡 (volume-check → Settlement → USDC 분배) | **세현** |
+| T5 | 토큰 발행 + Distributor + IJionAdapter + SelfPoolAdapter Sepolia 배포 | **세현** |
+| T6 | 강제 정산 잡 (통합 volume-check → Settlement → 어댑터별 일괄 회수) | **세현** |
+| T7 | Developer Integration 페이지 + Token Standard 문서 + UI Mock 라벨링 | **영인** |
+| T8 | Mock 외부 어댑터 (MerchantMoeMock / LendleMock) Sepolia 배포 + 데모 시연 | **세현** |
 
 티켓 안에선 mocks 써서 UI 먼저 만들고, 실제 백엔드/컨트랙트 붙으면 swap. 의존성 충돌 최소화.
 
+**Jion은 자체 거래/AMM UI 없음** — 발행 + 외부 DeFi 분배 + 모니터링/카탈로그가 전부. 거래는 Merchant Moe / Fluxion / Agni / Lendle / Init Capital 등에서 발생.
+
 ### Claude가 못 하는 부분 (사람 필수)
 
-- 메인넷 컨트랙트 배포 트랜잭션 서명
-- 외부 API 키 발급/결제 (Polygon.io, Z.ai)
+- Sepolia 컨트랙트 배포 트랜잭션 서명 (faucet 가스)
+- 외부 API 키 발급/결제 (Polygon.io, Anthropic, Supabase)
 - AI 에이전트 지갑 키 관리
 - 데모 데이 라이브 시연
+- (스트레치) 제출 후 메인넷 배포 USDC 시드 + 가스
 
 ---
 

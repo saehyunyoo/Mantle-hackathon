@@ -1,46 +1,41 @@
 # @jion/web
 
-Next.js 14 (App Router) — Jion 의 UI + API Routes + cron jobs 가 들어갈 자리.
+Jion 의 UI + API Routes + cron jobs. Next.js 16 + React 19 + Tailwind 4 + Turbopack.
 
-**아직 init 안 됨.** Phase 1 첫 티켓 시작할 때 아래 명령으로 init 한 뒤 작업 시작.
-
-## Init 가이드
-
-```bash
-cd apps
-bun create next-app web --typescript --tailwind --app --src-dir false --import-alias '@/*' --no-eslint=false
-
-# 필수 의존성
-cd web
-bun add wagmi viem @rainbow-me/rainbowkit
-bun add @anthropic-ai/sdk
-bun add @supabase/supabase-js
-bun add @pythnetwork/hermes-client
-
-# 모노레포 공유 패키지
-bun add @jion/types@workspace:* @jion/mocks@workspace:*
-```
-
-## 디렉토리 컨벤션 (티켓 시작 후 채워질 자리)
+## Layout
 
 ```
 app/
-├─ (public)/        # 사용자 페이지 (대시보드/스왑/LP/히스토리)
-├─ api/             # API routes (REST)
-│  └─ cron/         # cron 잡 (snapshot, settle 등)
-└─ layout.tsx, globals.css
+├─ page.tsx         # T1 — 오늘의 핫스톡 대시보드 (시장 탭 + Top10 카드)
+├─ layout.tsx       # root, 한국어, 다크 톤
+└─ globals.css      # Tailwind 4
 
-components/         # UI 컴포넌트 (shadcn 포함)
+components/
+├─ market-tabs.tsx  # use client — 시장 탭 전환
+└─ token-card.tsx   # 토큰 카드
+
 lib/
-├─ ai/              # AI 라우팅/LP 휴리스틱
-├─ chain/           # wagmi/viem config, contract 호출 헬퍼
-├─ db/              # supabase client
-└─ data/            # polygon.io, pyth client
+└─ format.ts        # 통화/거래량 포맷터
 ```
 
-## Mock 사용 (백엔드 붙기 전)
+향후 추가 예정: `app/swap/` (T2), `app/lp/` (T3), `app/api/` + `app/api/cron/` (T4~T6).
 
-```ts
-import { MOCK_SNAPSHOT_NASDAQ, MOCK_LP_RECOMMENDATION } from '@jion/mocks';
-// UI 작업은 일단 이걸로. 실제 API 붙으면 swap.
+## Dev
+
+```bash
+# 루트에서
+bun install
+bun run dev          # http://localhost:3000
+
+# 또는 이 디렉토리에서
+bun run dev
+bun run typecheck
+bun run lint
 ```
+
+## 공유 패키지
+
+- `@jion/types` — 도메인 타입 (`packages/types`)
+- `@jion/mocks` — UI 단독 작업용 mock 데이터 (`packages/mocks`)
+
+`next.config.ts`의 `transpilePackages`로 워크스페이스 ts 소스를 직접 import.
