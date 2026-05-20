@@ -63,8 +63,10 @@ docs/                    # 기획서, 데모 시나리오, mockup
 | T2 | AI Distribution Routing — 토큰별 "왜 이 DeFi에 갔는지" 설명 화면 | **영인** |
 | T3 | Cross-DeFi Performance — 분배된 토큰들의 프로토콜별 TVL/Volume 통합 대시보드 | **영인** |
 | T4 | 스냅샷 잡 (cron + Polygon.io + Supabase) | **세현** |
-| T5 | 토큰 발행 + AI 분배 실행 (TokenFactory + Distributor + Adapter들 Sepolia 배포) | **세현** |
-| T6 | 강제 정산 잡 (통합 volume-check → Settlement → 모든 DeFi 회수 + USDC 분배) | **세현** |
+| T5 | 토큰 발행 + Distributor + IJionAdapter + SelfPoolAdapter Sepolia 배포 | **세현** |
+| T6 | 강제 정산 잡 (통합 volume-check → Settlement → 어댑터별 일괄 회수) | **세현** |
+| T7 | Developer Integration 페이지 + Token Standard 문서 + UI Mock 라벨링 | **영인** |
+| T8 | Mock 외부 어댑터 (MerchantMoeMock / LendleMock) Sepolia 배포 + 데모 시연 | **세현** |
 
 티켓 안에선 mocks 써서 UI 먼저 만들고, 실제 백엔드/컨트랙트 붙으면 swap. 의존성 충돌 최소화.
 

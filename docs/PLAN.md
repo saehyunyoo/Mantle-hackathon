@@ -8,17 +8,25 @@
 
 ## 📌 Revision History
 
+> ### 🧩 2026-05-20 저녁 — **인프라 컨셉 증명 (T7/T8 신설)**
+>
+> 영인 질문: \"하이브리드면 우리가 인프라/어댑터이고 외부 DeFi가 호환해서 쓸 수 있다는 걸 어떻게 보여줘?\" → 다음 추가:
+> - **T7 (#16, 영인):** Developer Integration 페이지 + Jion-Issued RWA Token Standard 문서 + T1 카드 \"Mock\" 라벨링
+> - **T8 (#17, 세현):** Mock 외부 어댑터 컨트랙트(`MerchantMoeMockAdapter` / `LendleMockAdapter`) Sepolia 자체 배포 → 데모에서 \"한 토큰이 셋(SelfPool + Mock MerchantMoe + Mock Lendle)에 동시 listing\" 시연
+>
+> 결과: 데모/심사위원에게 \"Adapter Pattern이 진짜 작동한다\" + \"외부 DeFi가 어떻게 통합하면 되는지\" 명시적으로 증명.
+>
 > ### 🔧 2026-05-20 PM — **하이브리드 합의 (피봇 조정)**
 >
 > 세현이 PR #9에서 \"Merchant Moe Sepolia 미배포\" 확인 → Sepolia에 외부 DeFi 인스턴스 없음.
 >
 > **타협안 (영인 결정):** Jion 자체 풀(`JionPool`) + Adapter 패턴 인프라 둘 다 유지.
-> - **Phase 1 MVP:** 자체 풀(`JionPool` = `SelfPoolAdapter`) 1개. AI 분배 라우팅 = 자체 풀에 어떤 파라미터(초기 시드/fee tier 등)로 listing할지 결정
-> - **Phase 2+:** 외부 DeFi 어댑터(MerchantMoe/Fluxion/Agni/Lendle/Init Capital) 확장 — `IJionAdapter` 인터페이스로 통일
+> - **Phase 1 MVP:** 자체 풀(`JionPool` = `SelfPoolAdapter`) 1개 + Mock 외부 어댑터 2~3개 (T8). AI 분배 라우팅 = 어떤 어댑터에 어떤 파라미터로 listing할지 결정
+> - **Phase 2+:** Mock → 실제 외부 DeFi 어댑터(MerchantMoe/Fluxion/Agni/Lendle/Init Capital) 확장 — `IJionAdapter` 인터페이스로 통일
 > - `JionPool.sol` / `JionRouter.sol` 삭제 **취소**. 세현 PR #10 골격 그대로 유지
-> - `Distributor.sol` + `IJionAdapter` 인터페이스만 신설
+> - `Distributor.sol` + `IJionAdapter` 인터페이스 + `SelfPoolAdapter` 신설 (T5)
 >
-> 즉 \"외부 분배\" 컨셉의 **아키텍처(어댑터 패턴)는 유지**, MVP **구현은 자체 풀로 시작**. Sepolia 현실 + 세현 진척 둘 다 존중.
+> 즉 \"외부 분배\" 컨셉의 **아키텍처(어댑터 패턴)는 유지**, MVP **구현은 자체 풀 + Mock 외부 어댑터**. Sepolia 현실 + 세현 진척 + 인프라 컨셉 증명 셋 다 만족.
 >
 > ### 🔄 2026-05-20 AM — **컨셉 피봇 (PIVOT)** *(하이브리드로 조정됨, 위 참고)*
 >
