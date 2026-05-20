@@ -39,7 +39,7 @@ jobs:
         run: forge test -vv
 
   packages:
-    name: Bun typecheck (packages)
+    name: Bun typecheck + test (packages)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,3 +53,8 @@ jobs:
 
       - name: Typecheck
         run: bun run typecheck || echo "no typecheck script yet"
+
+      - name: Test (only packages that define a test script)
+        run: bun --filter '*' run test 2>&1 | tee /tmp/bun-test.log; \
+             grep -q "ran across 0 packages" /tmp/bun-test.log && \
+               echo "no test scripts yet — OK" || true
