@@ -108,36 +108,35 @@ contract Distributor is Ownable, ReentrancyGuard {
         if (sumWeights > 10_000) revert WeightsExceedMax(sumWeights);
 
         for (uint256 i = 0; i < adapters.length; i++) {
-            address adapter = adapters[i];
-            if (!isAdapter[adapter]) revert NotAdapter(adapter);
-
-            uint256 amountToken = (totalToken * uint256(weightsBps[i])) / 10_000;
-            uint256 amountQuote = (totalQuote * uint256(weightsBps[i])) / 10_000;
-            if (amountToken == 0 && amountQuote == 0) continue;
-
-            // Hand off to adapter: deposit input tokens first, then call list.
-            _safeTransfer(token, adapter, amountToken);
-            _safeTransfer(quote, adapter, amountQuote);
-
-            bytes32 positionId = IJionAdapter(adapter).list(
-                token,
-                quote,
-                amountToken,
-                amountQuote
-            );
-
-            positionOf[token][adapter] = positionId;
-            _venuesOf[token].push(adapter);
-
-            emit TokenDistributed(
-                token,
-                adapter,
-                amountToken,
-                amountQuote,
-                weightsBps[i],
-                positionId
-            );
+            if (!isAdapter[adapters[i]]) revert NotAdapter(adapters[i]);
+            _distributeOne(token, quote, adapters[i], weightsBps[i], totalToken, totalQuote);
         }
+    }
+
+    /// @dev Extracted to keep `distribute`'s stack depth under the 16-slot limit.
+    function _distributeOne(
+        address token,
+        address quote,
+        address adapter,
+        uint16 weightBps,
+        uint256 totalToken,
+        uint256 totalQuote
+    ) internal {
+        uint256 amountToken = (totalToken * uint256(weightBps)) / 10_000;
+        uint256 amountQuote = (totalQuote * uint256(weightBps)) / 10_000;
+        if (amountToken == 0 && amountQuote == 0) return;
+
+        _safeTransfer(token, adapter, amountToken);
+        _safeTransfer(quote, adapter, amountQuote);
+
+        bytes32 positionId = IJionAdapter(adapter).list(
+            token, quote, amountToken, amountQuote
+        );
+
+        positionOf[token][adapter] = positionId;
+        _venuesOf[token].push(adapter);
+
+        emit TokenDistributed(token, adapter, amountToken, amountQuote, weightBps, positionId);
     }
 
     /// @notice Read-only list of adapters a token is currently distributed to.
