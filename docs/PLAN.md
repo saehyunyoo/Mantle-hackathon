@@ -1,4 +1,4 @@
-# Jion — 일일 거래량 Top 10 RWA 토큰화 + AI 라우팅 플랫폼
+# Jion — 일일 거래량 Top 10 RWA 토큰화 + AI 분배 라우팅 인프라
 
 > **출품 해커톤:** Mantle Turing Test Hackathon 2026 — Phase 2 (AI Awakening) / **AI × RWA 트랙**
 > **제출 마감:** 2026-06-15 · **데모 데이:** 2026-07-02 ~ 03 · **수상:** 2026-07-10
@@ -6,9 +6,35 @@
 
 ---
 
+## 📌 Revision History
+
+> ### 🔄 2026-05-20 — **컨셉 피봇 (PIVOT)**
+>
+> **이전:** Jion이 자체 AMM(JionPool, Uniswap V2 fork) 운영 + 자체 사이트에서 사용자 swap/LP UI 제공.
+>
+> **이후:** Jion은 **토큰화 + AI 분배 라우팅 인프라**. 자체 거래 UI 없음. 발행 직후 AI가 **외부 Mantle DeFi 프로토콜**(Merchant Moe / Fluxion / Agni / Lendle / Init Capital)에 자동 상장/시드. 트레이더는 분배된 곳에서 거래, DeFi 앱 개발자는 API/구독으로 새 토큰을 가져감.
+>
+> **영향 받은 섹션:**
+> - §2.2 해결책 (AI 라우팅 → AI 분배 라우팅)
+> - §3 핵심 컨셉 표 (장기 비전 / 타겟 유저 / 차별점)
+> - §4 토큰 메커니즘 — **§4.2 분배 신설**, §4.3 외부 통합 신설, §4.4 생명주기 (통합 거래량 기준), §4.5 수익 모델 (거래 수수료 → 분배 수수료)
+> - §5 AI 시스템 — §5.1 역할 (스왑 라우팅/LP 옵티마이저 → 분배 라우팅/Cross-DeFi Performance), §5.2 컨셉 슬로건 ("Explainable AI Distribution")
+> - §7.4 데모 시나리오 (T1~T4 전부 재정의)
+> - §10.3 트랙 매핑, §10.4 어필 포인트 (다 프로토콜 통합 어필 추가)
+> - **부록 A 컨트랙트 구조** ⚠️ — **JionPool.sol + JionRouter.sol 삭제**, Distributor.sol + adapters/{MerchantMoe,Fluxion,Agni,Lendle,InitCapital}Adapter.sol 추가
+> - 부록 B 잡 스케줄 (`deploy-tokens` → `issue-tokens` + `compute-distribution` + `execute-distribution`)
+>
+> **T5(#5) 작업자(@saehyunyoo) 주의:** 부록 A 컨트랙트 구조가 가장 큰 영향 받음. 작업 시작 전 부록 A 확인 필수. 자세한 작업 항목은 [이슈 #5](https://github.com/saehyunyoo/Mantle-hackathon/issues/5) 본문 갱신본 참조.
+>
+> ### 🔄 2026-05-18 — 체인 정책 변경
+>
+> 메인넷 first deploy → **Sepolia 우선** (메인넷은 제출 후 스트레치). §3 체인, §7.1 시장 커버리지, §8 일정 영향.
+
+---
+
 ## 1. 한 줄 요약
 
-**Jion은 매일 시장별 거래량 Top 10 주식을 자동으로 토큰화하고, AI가 Mantle DeFi 전체에서 최적 거래/유동성 경로를 찾아주는 RWA × AI 플랫폼이다.**
+**Jion은 매일 시장별 거래량 Top 10 주식을 자동으로 토큰화해서 Mantle DeFi 전체에 AI가 최적 분배(상장)해주는 RWA × AI 인프라다.** 거래는 Jion이 아니라 분배된 DeFi 프로토콜(Merchant Moe / Fluxion / Agni / Lendle / Init Capital)에서 발생한다.
 
 ---
 
@@ -22,10 +48,10 @@
 
 ### 2.2 해결책 (Jion의 답)
 
-1. **큐레이션 자동화** — 매일 시장 개장 +1시간 시점 거래량 Top 10을 자동 스냅샷 → 스마트컨트랙트 자동 배포. 사용자는 "선택"이 아니라 "오늘의 트렌딩"을 받음.
-2. **AI 라우팅** — 발행된 합성 토큰을 Mantle DeFi(Fluxion / Merchant Moe / Agni Finance) 전체에서 멀티홉 포함 최저 슬리피지 경로로 거래.
-3. **AI LP 옵티마이저** — 매일 새로 발행된 토큰 중 어디에 유동성 공급하면 수익 최대인지 AI가 예측하고 자동 배분/추천.
-4. **동적 생명주기** — 거래량 임계치($10K/24h) 기준 자동 유예/정산. 살아남은 종목만 계속 존재 (자연 도태).
+1. **큐레이션 자동화** — 매일 시장 개장 +1시간 시점 거래량 Top 10을 자동 스냅샷 → 합성 토큰(ERC-20) 자동 발행. 사용자는 "선택"이 아니라 "오늘의 트렌딩"을 받음.
+2. **AI 분배 라우팅 (Distribution Routing)** — 발행 직후 각 토큰을 어느 DeFi 프로토콜(AMM/렌딩/담보)에 어떤 파라미터로 상장할지 AI가 결정. 토큰 특성(거래량/변동성/시가총액)에 따라 최적 분배 전략 자동 실행.
+3. **Cross-DeFi 통합 카탈로그** — 트레이더는 "어디서 거래 가능한지" 명단을 한 곳에서. DeFi 앱은 API/구독으로 새 토큰을 자동 통합.
+4. **동적 생명주기** — 24h 통합 거래량 임계치($10K) 기준 자동 유예/정산. 모든 DeFi에서 일괄 회수 + USDC 분배.
 
 ---
 
@@ -33,15 +59,15 @@
 
 | 항목 | 내용 |
 |---|---|
-| **장기 비전** | 합성토큰(가격 추종, Synthetix/GMX 스타일) |
-| **MVP 컨셉** | 시뮬레이션 + 오라클 페깅 (mock 데이터 일부) |
+| **장기 비전** | RWA 토큰화 인프라 + AI 분배 엔진 (Mantle DeFi 표준 입구) |
+| **MVP 컨셉** | 시뮬레이션 + 오라클 페깅 + 외부 DeFi 통합(Mock listing 일부) |
 | **체인** | Mantle (EVM L2) **Sepolia 테스트넷 우선 배포** (메인넷은 제출 이후 후순위) |
-| **타겟 유저** | TradFi ↔ DeFi 브릿지 (양쪽 다) |
-| **차별점** | "큐레이션 자동화 + AI 라우팅" — 사용자는 종목 고를 필요 없음. AI가 알아서 매수/LP 분배까지 |
+| **타겟 유저** | (a) TradFi → DeFi 트레이더 (b) Mantle DeFi 앱 개발자 — **양방향 B2B/B2C** |
+| **차별점** | "Jion에서 거래 안 함" — 발행 + 분배만. 거래는 Mantle DeFi 전체로 흩어짐. 사용자는 종목/풀 고를 필요 없고, DeFi는 새 RWA 토큰을 자동으로 받음 |
 
 ---
 
-## 4. 토큰 메커니즘
+## 4. 토큰 메커니즘 🔄 *2026-05-20 피봇*
 
 ### 4.1 발행 (Issuance)
 
@@ -49,58 +75,71 @@
 - **선정 기준:** 직전 1시간 거래량 Top 10
 - **토큰 표준:** ERC-20 (`mTICKER-YYYYMMDD` 형식 → 예: `mTSLA-20260601`)
 - **발행가:** 오라클(Pyth Network) 시세 = 1 토큰 가격
-- **초기 유동성:** 프로토콜이 시드 풀 자동 생성 (Uniswap V2 fork AMM)
+- **유통:** Jion은 직접 AMM 운영 안 함. 발행 직후 AI 라우팅 결과대로 **외부 DeFi 프로토콜에 자동 분배** (4.2 참고)
 
-### 4.2 거래 (Trading)
+### 4.2 분배 (Distribution) — Jion의 핵심 🆕 *2026-05-20 신설*
 
-- **발행 직후:** AMM 풀에서 자유 거래 (수요공급 기반 가격)
-- **결과:** 오라클 가격과 괴리 발생 가능 → 차익거래 기회 (자연스러운 페깅 압력)
-- **사용자 행동:** Swap (매수/매도) + LP 공급
+발행된 토큰을 **AI가 결정한 라우팅대로 외부 Mantle DeFi에 자동 상장/시드**한다.
 
-### 4.3 생명주기 (Lifecycle) — 동적 폐기
+- **분배 대상 후보:**
+  - AMM: Merchant Moe / Fluxion / Agni Finance
+  - 렌딩/담보: Lendle / Init Capital
+- **분배 결정 입력:** 토큰 거래량 랭크, 변동성, 시가총액, 풀 깊이, 프로토콜별 fee tier
+- **분배 결정 출력:** `TokenDistribution { listings: DeFiListing[], routingReasoning: string }` — 어떤 프로토콜에 어떤 kind(AMM/담보/렌딩)로 얼마 TVL 시드할지 + 자연어 설명
+- **실행:** Jion 컨트랙트가 각 DeFi의 어댑터 컨트랙트를 통해 풀 생성 / collateral 등록 / lending 시장 추가 트랜잭션 직접 실행
+- **거래는 외부에서:** 트레이더가 mNVDA 사고 싶으면 Merchant Moe / Fluxion 등 분배된 곳에서 거래. Jion 사이트는 카탈로그만.
 
-매일 다음 발행 시점(개장 +1시간)에 직전 24h 풀 거래량 측정:
+### 4.3 외부 통합 (B2B Integration)
+
+- **API/구독:** DeFi 앱이 새 토큰을 자동 가져갈 수 있게 webhook + REST API (예: `GET /api/today` → 오늘 발행 토큰 + 분배 정보)
+- **신규 DeFi 추가:** 새 프로토콜이 등록되면 다음 발행 사이클부터 라우팅 후보에 포함
+
+### 4.4 생명주기 (Lifecycle) — 동적 폐기
+
+매일 다음 발행 시점(개장 +1시간)에 직전 24h **통합 거래량**(모든 분배된 DeFi 풀 합산) 측정:
 
 - **≥ $10,000:** 24시간 유예 연장 (영구 존속 가능)
 - **< $10,000:** **강제 정산**
   - 정산 시점 오라클 가격으로 토큰 보유자에게 **USDC 환산 분배**
-  - LP는 자동 유동성 회수 (스테이블 + 잔여 USDC)
+  - 분배된 모든 DeFi에서 일괄 회수 (LP 회수 / collateral 청산 / lending 시장 종결)
   - 컨트랙트는 종결 상태로 이동
 
-**근거:** $10K = DexScreener 풀 노출 최소 유동성 기준선, Mantle DEX 풀 "활성/비활성" 분기점.
+**근거:** $10K = DexScreener 풀 노출 최소 유동성 기준선, "활성/비활성" 분기점.
 
-### 4.4 수익 모델
+### 4.5 수익 모델
 
 | 수익원 | 비율 | 비고 |
 |---|---|---|
-| **거래 수수료** | 0.05% (프로토콜 fee) | Uniswap 모델 (전체 수수료 중 일부, 나머지는 LP) |
+| **분배 수수료** | 0.1% | 분배된 DeFi 풀의 거래 수수료 일부를 Jion 프로토콜이 retainer로 수령 |
 | **정산 수수료** | 0.5% | 강제 정산 시 토큰홀더 정산금에서 차감 |
+| **B2B API** | 향후 유료 tier | DeFi 앱 대상 webhook/SLA — Phase 2 이후 |
 | **발행 수수료** | **무료** | 접근성 우선 — 프로토콜이 시드 |
 
 ---
 
-## 5. AI 시스템
+## 5. AI 시스템 🔄 *2026-05-20 피봇*
 
 ### 5.1 역할
 
-**5.1.1 AI 라우팅 (A)**
-- 사용자가 "이 토큰 사고 싶다"고 하면 → AI가 Mantle DeFi 전체 스캔 → 최저 슬리피지 멀티홉 경로 도출.
-- 비교 DEX: Fluxion / Merchant Moe / Agni Finance.
-- 결과는 **자연어 설명** 동반 ("Fluxion 직스왑이 Agni 경유보다 슬리피지 0.3% 낮음").
+**5.1.1 AI 분배 라우팅 (Distribution Routing) — 핵심**
+- 신규 발행된 각 토큰을 **어느 DeFi 프로토콜에 어떤 kind(AMM/담보/렌딩)로, 어떤 파라미터로 상장할지** 결정.
+- 입력: 거래량 랭크, 변동성, 시가총액, 각 프로토콜의 풀 깊이/fee tier/지원 자산
+- 출력: `TokenDistribution { listings: [{ protocol, kind, listingAddress, tvlUsd, reasoning }], routingReasoning }` — 어디에 얼마 시드할지 + 자연어 설명
+- 예: "mNVDA는 거래량 1위 → Merchant Moe(가장 깊은 USDC 페어) 메인 풀 + Lendle 담보 등록. mTSLA는 변동성 큼 → Fluxion 집중유동성 메인 + Agni 보조 풀 (cross-venue arb)"
 
-**5.1.2 AI LP 옵티마이저 (B)**
-- 오늘 발행된 Top 10 토큰 중 어디에 유동성 공급 시 수익률 최대인지 예측.
-- 입력: 발행 시점 시세, 직전 시장 거래량 패턴, 풀 깊이.
-- 출력: LP 배분 추천 (예: "$1000을 mNVDA 60%, mTSLA 30%, mAAPL 10%로 분배").
+**5.1.2 Cross-DeFi Performance Monitor**
+- 분배된 토큰들이 각 DeFi에서 어떻게 거래되고 있는지 실시간 추적
+- TVL / 24h volume / unique trader 수 / fee retainer
+- 다음 발행 사이클의 분배 라우팅 입력으로 피드백 (학습 루프)
 
 ### 5.2 아키텍처
 
 **5.2.1 모델 베이스 (MVP)**
-- **휴리스틱 + LLM** — 실제 라우트 계산은 그래프 탐색 (다익스트라 기반), LLM은:
-  - 사용자 의도 파싱 (자연어 → 거래 의도)
-  - 라우트/LP 추천 결과 자연어 설명
-  - 에이전트 오케스트레이션 (실패 시 재시도, 다중 후보 비교)
-- **컨셉 슬로건:** "Explainable AI Router"
+- **휴리스틱 + LLM** — 실제 분배 결정은 룰베이스 스코어링 (volume × depth × volatility), LLM은:
+  - 분배 결정 결과 자연어 설명 (트레이더/심사위원 readable)
+  - 에이전트 오케스트레이션 (분배 실패 시 폴백 라우트)
+  - 다음 사이클 입력 피드백 요약
+- **컨셉 슬로건:** "Explainable AI Distribution"
 
 **5.2.2 실행 위치**
 - **추론은 오프체인** (백엔드 서버)
@@ -150,19 +189,21 @@ MVP (D) → 성숙 단계 (C):
 
 - 매일 Sepolia 10개 + Mock 20개 = **약 30개/일** 토큰 발행 (시연 가능 규모)
 
-### 7.3 AI 라우팅 대상 DEX
+### 7.3 AI 분배 라우팅 대상 프로토콜
 
-- **Fluxion / Merchant Moe / Agni Finance** (Mantle Top 3)
+- **AMM:** Merchant Moe / Fluxion / Agni Finance
+- **렌딩/담보:** Lendle / Init Capital
 
-### 7.4 데모 시나리오
+### 7.4 데모 시나리오 🔄 *2026-05-20 피봇 — T1~T4 전부 재정의됨*
 
-1. **사용자가 "오늘의 핫스톡 보여줘" 입력**
-   → AI가 Top 10 카드 UI로 출력 (시장별 탭)
-2. **사용자가 "mNVDA 100불어치 사줘" 입력**
-   → AI 라우팅이 최적 경로 찾고 자연어 설명 + 원클릭 실행
-3. **사용자가 "오늘 LP 어디 공급할까?" 입력**
-   → AI 옵티마이저가 배분 추천 + 원클릭 실행
-4. **다음날 시연:** 임계치 미달 토큰 강제 정산 → 보유자/LP에게 USDC 환산 자동 분배
+1. **Trade today's trend (T1)**
+   → 오늘 발행된 토큰 카드 + 각 토큰이 어느 DeFi에 분배됐는지 칩. "Jion에서 거래 안 함, 분배된 곳으로 가서 거래" 메시지 명확.
+2. **AI Distribution Routing (T2)**
+   → 토큰 한 개 선택 → "왜 이 토큰이 Merchant Moe + Lendle에 갔는지" 자연어 설명 + 대안 비교 + 분배 결정 원본 데이터(스코어 테이블)
+3. **Cross-DeFi Performance (T3)**
+   → 분배된 토큰들의 각 DeFi 프로토콜별 TVL/24h volume/trader 수 통합 대시보드. "어디서 가장 잘 돌고 있는지" 한눈에.
+4. **다음날 시연 (T6)**
+   → 임계치 미달 토큰 강제 정산 → 모든 DeFi에서 일괄 회수 + 보유자에게 USDC 자동 분배
 
 ---
 
@@ -227,17 +268,18 @@ MVP (D) → 성숙 단계 (C):
 | 트랙 키워드 | Jion 대응 요소 |
 |---|---|
 | RWA | 주식 토큰화 (실세계 자산) |
-| Dynamic yield strategies | AI LP 옵티마이저 |
-| Automated risk management | 동적 임계치($10K) 기반 자동 폐기/정산 |
-| Mantle RWA infrastructure | Pyth 오라클 + Mantle Sepolia 배포 (제출 후 메인넷 확장) |
+| Dynamic yield strategies | AI 분배 라우팅 — 토큰별 최적 DeFi 상장 전략 |
+| Automated risk management | 동적 임계치($10K) 통합 거래량 기반 자동 폐기/정산 |
+| Mantle RWA infrastructure | Pyth 오라클 + Mantle DeFi 5개 프로토콜 통합 (Sepolia) |
 
 ### 10.4 심사위원 어필 포인트
 
 심사진(Allora Network, Nansen, Z.ai, Animoca Brands, DoraHacks 등) 어필:
 1. **Sepolia 실배포 + 메인넷 ready 컨트랙트** — 작동 신뢰 + 즉시 메인넷 가능한 인프라
-2. **온체인 의사결정 기록** — "Verifiable Agent" 컨셉 (Allora 친화적)
-3. **명확한 로드맵** — 휴리스틱 → 시계열/검증 가능 추론 진화
-4. **Z.ai 통합** — 스폰서 가점
+2. **Mantle DeFi 다(多) 프로토콜 통합** — 자체 AMM 운영이 아닌 외부 생태계 연결 = Mantle ecosystem 친화적 어필
+3. **온체인 의사결정 기록** — "Verifiable Agent" 컨셉 (Allora 친화적)
+4. **명확한 로드맵** — 휴리스틱 → 시계열/검증 가능 추론 진화
+5. **Z.ai 통합** — 스폰서 가점
 
 ---
 
@@ -263,24 +305,48 @@ MVP (D) → 성숙 단계 (C):
 
 ---
 
-## 부록 A — 컨트랙트 구조 (초안)
+## 부록 A — 컨트랙트 구조 (초안) ⚠️ *2026-05-20 피봇 — T5 작업자(@saehyunyoo) 필독*
+
+> ### ⚠️ 컨셉 피봇 변경 사항 (T5 작업 전 필독)
+>
+> | 항목 | 이전 (~2026-05-19) | 이후 (2026-05-20~) |
+> |---|---|---|
+> | 자체 AMM | `JionPool.sol` (Uniswap V2 fork) | ❌ **삭제** — 외부 DeFi에 위임 |
+> | 거래 라우터 | `JionRouter.sol` (외부 진입점) | ❌ **삭제** — Jion에서 거래 X |
+> | 분배 컨트랙트 | (없음) | ✅ **신설** `Distributor.sol` |
+> | 외부 어댑터 | (없음) | ✅ **신설** `adapters/*.sol` (5개) |
+>
+> **이유:** Jion은 토큰화 + AI 분배 인프라. 거래는 외부 Mantle DeFi 프로토콜에서 발생. 자체 AMM 운영하면 외부 통합 모티베이션 약해짐.
+>
+> **T5 작업 시작 시:** [이슈 #5](https://github.com/saehyunyoo/Mantle-hackathon/issues/5) 본문 갱신본 참조. 외부 프로토콜 5개의 Sepolia 인스턴스 주소 확인이 선행 작업.
 
 ```
 contracts/
-├─ TokenFactory.sol        // ERC-20 합성토큰 발행
-├─ JionPool.sol            // Uniswap V2 fork AMM
-├─ OracleAdapter.sol       // Pyth 시세 어댑터
-├─ Settlement.sol          // 임계치 미달 시 강제 정산
-├─ AgentLogger.sol         // AI 의사결정 온체인 기록
-└─ JionRouter.sol          // 외부 호출 진입점
+├─ JionToken.sol             // ERC-20 합성토큰 (mTICKER-YYYYMMDD)
+├─ TokenFactory.sol          // 일별 배치 발행 진입점
+├─ OracleAdapter.sol         // Pyth 시세 어댑터
+├─ Distributor.sol           // 🆕 AI 분배 결정 → 외부 DeFi 어댑터 일괄 실행
+├─ Settlement.sol            // 임계치 미달 시 강제 정산 + 다중 DeFi 회수
+├─ AgentLogger.sol           // AI 의사결정 온체인 기록 (TokenDistribution emit)
+└─ adapters/                 // 🆕 외부 DeFi 프로토콜 어댑터 (인터페이스 통일)
+   ├─ MerchantMoeAdapter.sol // 풀 생성 / removeLiquidity
+   ├─ FluxionAdapter.sol     // 집중 유동성 풀 생성
+   ├─ AgniAdapter.sol        // 풀 생성
+   ├─ LendleAdapter.sol      // 담보 자산 등록
+   └─ InitCapitalAdapter.sol // lending market 추가
 ```
 
-## 부록 B — 백엔드 잡 스케줄
+> ~~`JionPool.sol`~~ (자체 AMM) — **2026-05-20 피봇으로 삭제**. 대신 `Distributor.sol` + `adapters/*.sol`로 분배 위임.
+> ~~`JionRouter.sol`~~ (외부 호출 진입점) — **2026-05-20 피봇으로 삭제**. Jion 사이트에서 거래 X.
+
+## 부록 B — 백엔드 잡 스케줄 🔄 *2026-05-20 피봇 — `compute-distribution` + `execute-distribution` 신설*
 
 | 잡 | 트리거 | 동작 |
 |---|---|---|
 | `snapshot-market` | 각 시장 개장 +1시간 (cron) | Polygon.io에서 Top 10 가져옴 → DB 저장 |
-| `deploy-tokens` | 스냅샷 직후 | TokenFactory 호출 → 10개 토큰 배포 |
-| `daily-volume-check` | 매일 개장 +1시간 | 직전 24h 거래량 측정 → 임계치 비교 → 통과/정산 |
-| `settle-expired` | volume-check가 정산 결정 시 | Settlement 컨트랙트 호출 |
-| `ai-decision-log` | 모든 AI 의사결정 시 | AgentLogger 이벤트 emit + DB 동기화 |
+| `issue-tokens` | 스냅샷 직후 | TokenFactory 호출 → 10개 토큰 발행 |
+| `compute-distribution` | issue-tokens 직후 | 각 토큰의 분배 라우팅 결정 (휴리스틱+LLM) → `TokenDistribution` 산출 |
+| `execute-distribution` | compute-distribution 직후 | Distributor 호출 → 각 어댑터로 외부 DeFi 풀/담보 등록 |
+| `daily-volume-check` | 매일 개장 +1시간 | 분배된 모든 풀의 24h 통합 거래량 측정 → 임계치 비교 |
+| `settle-expired` | volume-check가 정산 결정 시 | Settlement 컨트랙트 → 모든 DeFi에서 회수 + USDC 분배 |
+| `ai-decision-log` | 모든 AI 분배 결정 시 | AgentLogger 이벤트 emit + DB 동기화 |

@@ -59,14 +59,16 @@ docs/                    # 기획서, 데모 시나리오, mockup
 
 | ID | 티켓 (풀스택) | 담당 |
 |---|---|---|
-| T1 | 오늘의 핫스톡 대시보드 (Top 10 카드 + 시장별 탭) | **영인** |
-| T2 | AI 라우팅 스왑 UI + API + 컨트랙트 호출 | **영인** |
-| T3 | AI LP 옵티마이저 UI + API + 컨트랙트 호출 | **영인** |
+| T1 | Trade today's trend — 오늘 발행 토큰 카탈로그 (시장별 탭 + 분배된 DeFi 칩) | **영인** |
+| T2 | AI Distribution Routing — 토큰별 "왜 이 DeFi에 갔는지" 설명 화면 | **영인** |
+| T3 | Cross-DeFi Performance — 분배된 토큰들의 프로토콜별 TVL/Volume 통합 대시보드 | **영인** |
 | T4 | 스냅샷 잡 (cron + Polygon.io + Supabase) | **세현** |
-| T5 | 토큰 자동 발행 잡 (TokenFactory 호출 + **Sepolia 배포/서명**) | **세현** |
-| T6 | 강제 정산 잡 (volume-check → Settlement → USDC 분배, Sepolia) | **세현** |
+| T5 | 토큰 발행 + AI 분배 실행 (TokenFactory + Distributor + Adapter들 Sepolia 배포) | **세현** |
+| T6 | 강제 정산 잡 (통합 volume-check → Settlement → 모든 DeFi 회수 + USDC 분배) | **세현** |
 
 티켓 안에선 mocks 써서 UI 먼저 만들고, 실제 백엔드/컨트랙트 붙으면 swap. 의존성 충돌 최소화.
+
+**Jion은 자체 거래/AMM UI 없음** — 발행 + 외부 DeFi 분배 + 모니터링/카탈로그가 전부. 거래는 Merchant Moe / Fluxion / Agni / Lendle / Init Capital 등에서 발생.
 
 ### Claude가 못 하는 부분 (사람 필수)
 

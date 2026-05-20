@@ -1,4 +1,8 @@
-import { MOCK_MARKETS, MOCK_SNAPSHOTS_TODAY } from "@jion/mocks";
+import {
+  MOCK_DISTRIBUTIONS_TODAY,
+  MOCK_MARKETS,
+  MOCK_SNAPSHOTS_TODAY,
+} from "@jion/mocks";
 import { MarketTabs } from "@/components/market-tabs";
 
 export default function Home() {
@@ -14,19 +18,33 @@ export default function Home() {
           Mantle · AI × RWA
         </div>
         <h1 className="text-4xl font-semibold tracking-tight text-zinc-50 sm:text-5xl">
-          오늘의 트렌딩
+          Trade today&apos;s trend
         </h1>
         <p className="mt-3 max-w-2xl text-base text-zinc-400">
-          매일 시장 개장 +1시간 기준 거래량 Top 10 주식을 자동으로 합성토큰화.
-          AI가 Mantle DeFi에서 최적 거래/유동성 경로를 찾아줍니다.
+          Daily top-volume stocks per market, auto-tokenized one hour after open
+          and AI-routed across Mantle DeFi. Trade them where they live — not here.
         </p>
       </header>
 
-      <MarketTabs snapshots={MOCK_SNAPSHOTS_TODAY} marketNames={marketNames} />
+      <MarketTabs
+        snapshots={MOCK_SNAPSHOTS_TODAY}
+        marketNames={marketNames}
+        distributions={MOCK_DISTRIBUTIONS_TODAY}
+      />
 
       <footer className="mt-16 border-t border-zinc-900 pt-6 text-xs text-zinc-600">
         <p>
-          현재 화면은 mock 데이터 기반(T1). 실제 데이터/스왑/LP는 T2~T6에서 연결.
+          Prices via{" "}
+          <a
+            href="https://pyth.network/"
+            target="_blank"
+            rel="noreferrer"
+            className="text-violet-400 hover:underline"
+          >
+            Pyth Network
+          </a>
+          . Mock data shown for T1. Jion issues the tokens; trading happens on
+          Mantle DeFi venues (Merchant Moe, Fluxion, Agni, Lendle, Init Capital).
         </p>
       </footer>
     </main>
