@@ -13,7 +13,8 @@
     "lint": "bun --filter '*' lint",
     "typecheck": "bun --filter '*' typecheck",
     "test:contracts": "cd contracts && forge test -vv",
-    "build:contracts": "cd contracts && forge build"
+    "build:contracts": "cd contracts && forge build",
+    "export-abi": "bun run scripts/export-abi.ts"
   },
   "engines": {
     "bun": ">=1.1.0",
