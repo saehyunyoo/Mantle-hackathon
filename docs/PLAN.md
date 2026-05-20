@@ -8,11 +8,23 @@
 
 ## 📌 Revision History
 
-> ### 🔄 2026-05-20 — **컨셉 피봇 (PIVOT)**
+> ### 🔧 2026-05-20 PM — **하이브리드 합의 (피봇 조정)**
+>
+> 세현이 PR #9에서 \"Merchant Moe Sepolia 미배포\" 확인 → Sepolia에 외부 DeFi 인스턴스 없음.
+>
+> **타협안 (영인 결정):** Jion 자체 풀(`JionPool`) + Adapter 패턴 인프라 둘 다 유지.
+> - **Phase 1 MVP:** 자체 풀(`JionPool` = `SelfPoolAdapter`) 1개. AI 분배 라우팅 = 자체 풀에 어떤 파라미터(초기 시드/fee tier 등)로 listing할지 결정
+> - **Phase 2+:** 외부 DeFi 어댑터(MerchantMoe/Fluxion/Agni/Lendle/Init Capital) 확장 — `IJionAdapter` 인터페이스로 통일
+> - `JionPool.sol` / `JionRouter.sol` 삭제 **취소**. 세현 PR #10 골격 그대로 유지
+> - `Distributor.sol` + `IJionAdapter` 인터페이스만 신설
+>
+> 즉 \"외부 분배\" 컨셉의 **아키텍처(어댑터 패턴)는 유지**, MVP **구현은 자체 풀로 시작**. Sepolia 현실 + 세현 진척 둘 다 존중.
+>
+> ### 🔄 2026-05-20 AM — **컨셉 피봇 (PIVOT)** *(하이브리드로 조정됨, 위 참고)*
 >
 > **이전:** Jion이 자체 AMM(JionPool, Uniswap V2 fork) 운영 + 자체 사이트에서 사용자 swap/LP UI 제공.
 >
-> **이후:** Jion은 **토큰화 + AI 분배 라우팅 인프라**. 자체 거래 UI 없음. 발행 직후 AI가 **외부 Mantle DeFi 프로토콜**(Merchant Moe / Fluxion / Agni / Lendle / Init Capital)에 자동 상장/시드. 트레이더는 분배된 곳에서 거래, DeFi 앱 개발자는 API/구독으로 새 토큰을 가져감.
+> **이후:** Jion은 **토큰화 + AI 분배 라우팅 인프라**. 자체 거래 UI 없음. 발행 직후 AI가 **(MVP) 자체 풀에 / (Phase 2+) 외부 Mantle DeFi 프로토콜**(Merchant Moe / Fluxion / Agni / Lendle / Init Capital)에 자동 상장/시드. 트레이더는 분배된 곳에서 거래, DeFi 앱 개발자는 API/구독으로 새 토큰을 가져감.
 >
 > **영향 받은 섹션:**
 > - §2.2 해결책 (AI 라우팅 → AI 분배 라우팅)
@@ -77,17 +89,19 @@
 - **발행가:** 오라클(Pyth Network) 시세 = 1 토큰 가격
 - **유통:** Jion은 직접 AMM 운영 안 함. 발행 직후 AI 라우팅 결과대로 **외부 DeFi 프로토콜에 자동 분배** (4.2 참고)
 
-### 4.2 분배 (Distribution) — Jion의 핵심 🆕 *2026-05-20 신설*
+### 4.2 분배 (Distribution) — Jion의 핵심 🆕 *2026-05-20 신설 / 🔧 PM 하이브리드 조정*
 
-발행된 토큰을 **AI가 결정한 라우팅대로 외부 Mantle DeFi에 자동 상장/시드**한다.
+발행된 토큰을 **AI가 결정한 라우팅대로 분배 대상에 자동 상장/시드**한다. 분배 대상은 `IJionAdapter` 인터페이스를 구현한 어댑터 컨트랙트(부록 A).
 
-- **분배 대상 후보:**
+- **Phase 1 MVP 활성 어댑터:**
+  - `SelfPoolAdapter` — Jion 자체 V2 fork `JionPool` (Sepolia에 외부 DeFi 인스턴스 부재로 자체 풀이 1차 분배 대상)
+- **Phase 2+ 확장 어댑터 (현재 stub):**
   - AMM: Merchant Moe / Fluxion / Agni Finance
   - 렌딩/담보: Lendle / Init Capital
 - **분배 결정 입력:** 토큰 거래량 랭크, 변동성, 시가총액, 풀 깊이, 프로토콜별 fee tier
-- **분배 결정 출력:** `TokenDistribution { listings: DeFiListing[], routingReasoning: string }` — 어떤 프로토콜에 어떤 kind(AMM/담보/렌딩)로 얼마 TVL 시드할지 + 자연어 설명
-- **실행:** Jion 컨트랙트가 각 DeFi의 어댑터 컨트랙트를 통해 풀 생성 / collateral 등록 / lending 시장 추가 트랜잭션 직접 실행
-- **거래는 외부에서:** 트레이더가 mNVDA 사고 싶으면 Merchant Moe / Fluxion 등 분배된 곳에서 거래. Jion 사이트는 카탈로그만.
+- **분배 결정 출력:** `TokenDistribution { listings: DeFiListing[], routingReasoning: string }` — 어떤 어댑터에 어떤 kind(AMM/담보/렌딩)로 얼마 시드할지 + 자연어 설명
+- **실행:** `Distributor` 컨트랙트가 `IJionAdapter`의 `list()` 함수를 일괄 호출 (Phase 1엔 SelfPoolAdapter만, Phase 2+엔 외부 어댑터 추가)
+- **거래는 분배된 곳에서:** Phase 1엔 JionPool에서, Phase 2+엔 외부 Mantle DeFi에서. Jion 사이트는 카탈로그/모니터링만.
 
 ### 4.3 외부 통합 (B2B Integration)
 
@@ -305,39 +319,46 @@ MVP (D) → 성숙 단계 (C):
 
 ---
 
-## 부록 A — 컨트랙트 구조 (초안) ⚠️ *2026-05-20 피봇 — T5 작업자(@saehyunyoo) 필독*
+## 부록 A — 컨트랙트 구조 (초안) 🔧 *2026-05-20 PM 하이브리드 — T5 작업자(@saehyunyoo) 필독*
 
-> ### ⚠️ 컨셉 피봇 변경 사항 (T5 작업 전 필독)
+> ### 🔧 하이브리드 합의 (PR #10 골격 + Adapter 인터페이스 신설)
 >
-> | 항목 | 이전 (~2026-05-19) | 이후 (2026-05-20~) |
-> |---|---|---|
-> | 자체 AMM | `JionPool.sol` (Uniswap V2 fork) | ❌ **삭제** — 외부 DeFi에 위임 |
-> | 거래 라우터 | `JionRouter.sol` (외부 진입점) | ❌ **삭제** — Jion에서 거래 X |
-> | 분배 컨트랙트 | (없음) | ✅ **신설** `Distributor.sol` |
-> | 외부 어댑터 | (없음) | ✅ **신설** `adapters/*.sol` (5개) |
+> | 항목 | 결정 |
+> |---|---|
+> | 자체 AMM `JionPool.sol` | ✅ **유지** — Sepolia 외부 DeFi 부재로 자체 풀 필요. PR #10 골격 그대로 |
+> | 거래 라우터 `JionRouter.sol` | ✅ **유지** — 자체 풀 거래 진입점. PR #10 골격 그대로 |
+> | 분배 컨트랙트 `Distributor.sol` | ✅ **신설** — AI 분배 결정 받아 `IJionAdapter` 일괄 호출 |
+> | 어댑터 인터페이스 `IJionAdapter` | ✅ **신설** — 분배 대상 통일 인터페이스 |
+> | `SelfPoolAdapter` (JionPool 래퍼) | ✅ **신설 (Phase 1 MVP)** — Distributor가 호출하는 첫 어댑터 |
+> | 외부 DeFi 어댑터 (MerchantMoe/Fluxion/...) | 🔮 **Phase 2+ stub** — 인터페이스만 정의, 실 구현은 future |
 >
-> **이유:** Jion은 토큰화 + AI 분배 인프라. 거래는 외부 Mantle DeFi 프로토콜에서 발생. 자체 AMM 운영하면 외부 통합 모티베이션 약해짐.
+> **이유:** Sepolia에 외부 DeFi 인스턴스 없음(세현 [PR #9 RESEARCH.md](https://github.com/saehyunyoo/Mantle-hackathon/pull/9) 확인). MVP는 자체 풀로 가되, Adapter 패턴 인프라를 미리 깔아 Phase 2+에 외부 DeFi 확장 가능하게.
 >
-> **T5 작업 시작 시:** [이슈 #5](https://github.com/saehyunyoo/Mantle-hackathon/issues/5) 본문 갱신본 참조. 외부 프로토콜 5개의 Sepolia 인스턴스 주소 확인이 선행 작업.
+> **T5 작업 가이드:** 세현 PR #10 골격 그대로 가도 됨. 추가로 `Distributor.sol` + `IJionAdapter.sol` + `SelfPoolAdapter.sol` 작성. 외부 어댑터는 인터페이스만 stub.
 
 ```
 contracts/
 ├─ JionToken.sol             // ERC-20 합성토큰 (mTICKER-YYYYMMDD)
 ├─ TokenFactory.sol          // 일별 배치 발행 진입점
 ├─ OracleAdapter.sol         // Pyth 시세 어댑터
-├─ Distributor.sol           // 🆕 AI 분배 결정 → 외부 DeFi 어댑터 일괄 실행
-├─ Settlement.sol            // 임계치 미달 시 강제 정산 + 다중 DeFi 회수
+├─ JionPool.sol              // Uniswap V2 fork AMM (Phase 1 MVP 활성)
+├─ JionRouter.sol            // 자체 풀 거래 진입점
+├─ Distributor.sol           // 🆕 AI 분배 결정 → IJionAdapter 일괄 실행
+├─ Settlement.sol            // 임계치 미달 시 강제 정산 + 어댑터별 일괄 회수
 ├─ AgentLogger.sol           // AI 의사결정 온체인 기록 (TokenDistribution emit)
-└─ adapters/                 // 🆕 외부 DeFi 프로토콜 어댑터 (인터페이스 통일)
-   ├─ MerchantMoeAdapter.sol // 풀 생성 / removeLiquidity
-   ├─ FluxionAdapter.sol     // 집중 유동성 풀 생성
-   ├─ AgniAdapter.sol        // 풀 생성
-   ├─ LendleAdapter.sol      // 담보 자산 등록
-   └─ InitCapitalAdapter.sol // lending market 추가
+└─ adapters/                 // 🆕 분배 대상 어댑터 (IJionAdapter 통일)
+   ├─ IJionAdapter.sol       // 인터페이스 (list / withdraw / volume24h)
+   ├─ SelfPoolAdapter.sol    // 🆕 JionPool 래퍼 (Phase 1 활성)
+   ├─ MerchantMoeAdapter.sol // 🔮 Phase 2+ stub
+   ├─ FluxionAdapter.sol     // 🔮 Phase 2+ stub
+   ├─ AgniAdapter.sol        // 🔮 Phase 2+ stub
+   ├─ LendleAdapter.sol      // 🔮 Phase 2+ stub
+   └─ InitCapitalAdapter.sol // 🔮 Phase 2+ stub
 ```
 
-> ~~`JionPool.sol`~~ (자체 AMM) — **2026-05-20 피봇으로 삭제**. 대신 `Distributor.sol` + `adapters/*.sol`로 분배 위임.
-> ~~`JionRouter.sol`~~ (외부 호출 진입점) — **2026-05-20 피봇으로 삭제**. Jion 사이트에서 거래 X.
+**Phase 1 (MVP) 활성 어댑터:** `SelfPoolAdapter` 1개. AI 분배 라우팅 = JionPool에 어떤 초기 시드/fee tier로 listing할지 결정.
+
+**Phase 2+ 확장 경로:** Mantle DeFi 프로토콜 Sepolia/메인넷 인스턴스 생기면 어댑터 stub만 실 구현으로 swap. `Distributor` 로직 변경 없음.
 
 ## 부록 B — 백엔드 잡 스케줄 🔄 *2026-05-20 피봇 — `compute-distribution` + `execute-distribution` 신설*
 
