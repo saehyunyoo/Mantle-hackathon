@@ -9,6 +9,8 @@ import { JionRouter } from "../src/JionRouter.sol";
 import { Distributor } from "../src/Distributor.sol";
 import { Settlement } from "../src/Settlement.sol";
 import { SelfPoolAdapter } from "../src/adapters/SelfPoolAdapter.sol";
+import { MerchantMoeMockAdapter } from "../src/adapters/mocks/MerchantMoeMockAdapter.sol";
+import { LendleMockAdapter } from "../src/adapters/mocks/LendleMockAdapter.sol";
 
 /**
  * @notice Deploy core Jion contracts to Mantle Sepolia.
@@ -47,6 +49,14 @@ contract DeployScript is Script {
         // Register SelfPoolAdapter as the Phase-1 active venue.
         dist.addAdapter(address(selfAdapter));
 
+        // T8: demo-only mock adapters so the multi-venue distribution story
+        // can be shown on Sepolia (Merchant Moe / Lendle don't have Sepolia
+        // instances). UI must label these as "Mock - Phase 2+".
+        MerchantMoeMockAdapter moeMock = new MerchantMoeMockAdapter(deployer);
+        LendleMockAdapter lendleMock = new LendleMockAdapter(deployer);
+        dist.addAdapter(address(moeMock));
+        dist.addAdapter(address(lendleMock));
+
         // Settlement uses USDC as the holder-payout token. On Sepolia we
         // deploy a mock USDC separately and update this address.
         address usdcAddr = vm.envOr("SEPOLIA_USDC", SEPOLIA_USDC_PLACEHOLDER);
@@ -63,6 +73,8 @@ contract DeployScript is Script {
         console.log("Distributor:    ", address(dist));
         console.log("SelfPoolAdapter:", address(selfAdapter));
         console.log("Settlement:     ", address(settlement));
+        console.log("MoE-Mock:       ", address(moeMock));
+        console.log("Lendle-Mock:    ", address(lendleMock));
         console.log("USDC:           ", usdcAddr);
         console.log("Pyth (mantle):  ", MANTLE_SEPOLIA_PYTH);
     }
