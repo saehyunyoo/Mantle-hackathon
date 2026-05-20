@@ -7,6 +7,7 @@ import { OracleAdapter } from "../src/OracleAdapter.sol";
 import { AgentLogger } from "../src/AgentLogger.sol";
 import { JionRouter } from "../src/JionRouter.sol";
 import { Distributor } from "../src/Distributor.sol";
+import { Settlement } from "../src/Settlement.sol";
 import { SelfPoolAdapter } from "../src/adapters/SelfPoolAdapter.sol";
 
 /**
@@ -25,6 +26,11 @@ contract DeployScript is Script {
     /// @notice Mantle Sepolia Pyth contract (per docs/RESEARCH.md §1.1).
     address constant MANTLE_SEPOLIA_PYTH = 0x98046Bd286715D3B0BC227Dd7a956b83D8978603;
 
+    /// @notice USDC placeholder for Sepolia. Replace with the actual mock-USDC
+    ///         address after we deploy one (or use a known Mantle Sepolia
+    ///         stable). Settled tokens pay holders in this token.
+    address constant SEPOLIA_USDC_PLACEHOLDER = address(0);
+
     function run() external {
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(pk);
@@ -41,6 +47,11 @@ contract DeployScript is Script {
         // Register SelfPoolAdapter as the Phase-1 active venue.
         dist.addAdapter(address(selfAdapter));
 
+        // Settlement uses USDC as the holder-payout token. On Sepolia we
+        // deploy a mock USDC separately and update this address.
+        address usdcAddr = vm.envOr("SEPOLIA_USDC", SEPOLIA_USDC_PLACEHOLDER);
+        Settlement settlement = new Settlement(usdcAddr, dist, deployer, deployer);
+
         vm.stopBroadcast();
 
         console.log("=== Jion - Mantle Sepolia ===");
@@ -51,6 +62,8 @@ contract DeployScript is Script {
         console.log("JionRouter:     ", address(router));
         console.log("Distributor:    ", address(dist));
         console.log("SelfPoolAdapter:", address(selfAdapter));
+        console.log("Settlement:     ", address(settlement));
+        console.log("USDC:           ", usdcAddr);
         console.log("Pyth (mantle):  ", MANTLE_SEPOLIA_PYTH);
     }
 }
