@@ -29,6 +29,7 @@ const CONTRACTS = [
   'JionRouter',
   'Distributor',
   'Settlement',
+  'MockUSDC',
   'SelfPoolAdapter',
   'MerchantMoeMockAdapter',
   'LendleMockAdapter',
