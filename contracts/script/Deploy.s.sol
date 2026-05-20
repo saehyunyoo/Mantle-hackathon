@@ -8,6 +8,7 @@ import { AgentLogger } from "../src/AgentLogger.sol";
 import { JionRouter } from "../src/JionRouter.sol";
 import { Distributor } from "../src/Distributor.sol";
 import { Settlement } from "../src/Settlement.sol";
+import { MockUSDC } from "../src/MockUSDC.sol";
 import { SelfPoolAdapter } from "../src/adapters/SelfPoolAdapter.sol";
 import { MerchantMoeMockAdapter } from "../src/adapters/mocks/MerchantMoeMockAdapter.sol";
 import { LendleMockAdapter } from "../src/adapters/mocks/LendleMockAdapter.sol";
@@ -57,9 +58,17 @@ contract DeployScript is Script {
         dist.addAdapter(address(moeMock));
         dist.addAdapter(address(lendleMock));
 
-        // Settlement uses USDC as the holder-payout token. On Sepolia we
-        // deploy a mock USDC separately and update this address.
-        address usdcAddr = vm.envOr("SEPOLIA_USDC", SEPOLIA_USDC_PLACEHOLDER);
+        // Settlement uses USDC as the holder-payout token. Sepolia has no
+        // real USDC contract, so deploy a mock first then wire Settlement
+        // to it. The mock has a 1M-per-call public faucet for demo setup.
+        address usdcAddr;
+        address overrideUsdc = vm.envOr("SEPOLIA_USDC", SEPOLIA_USDC_PLACEHOLDER);
+        if (overrideUsdc != SEPOLIA_USDC_PLACEHOLDER && overrideUsdc != address(0)) {
+            usdcAddr = overrideUsdc;
+        } else {
+            MockUSDC mockUsdc = new MockUSDC(deployer);
+            usdcAddr = address(mockUsdc);
+        }
         Settlement settlement = new Settlement(usdcAddr, dist, deployer, deployer);
 
         vm.stopBroadcast();

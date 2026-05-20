@@ -39,7 +39,11 @@ export const MANTLE_SEPOLIA_ADDRESSES = {
 
   // ---- External integrations ----
   Pyth: MANTLE_SEPOLIA_PYTH,
-  /** Mock USDC will be deployed separately in a follow-up. */
+  /**
+   * Mock USDC for the Sepolia demo. Fill in this address after running
+   * `forge script script/DeployMockUSDC.s.sol:DeployMockUSDC --broadcast`.
+   * Frontend MUST label this as "Mock USDC (testnet)".
+   */
   USDC: '0x0000000000000000000000000000000000000000',
 } as const;
 
