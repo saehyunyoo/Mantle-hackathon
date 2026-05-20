@@ -38,10 +38,11 @@ export const PYTH_FEED_IDS_US: Record<string, string> = {
 };
 
 // Korean tickers use numeric KRX codes; see Pyth `Equity.KR.{code}/KRW`.
+// Resolved via Hermes `/v2/price_feeds?query=...&asset_type=equity` on 2026-05-20.
 export const PYTH_FEED_IDS_KR: Record<string, string> = {
-  '005930': '0x58082ed1358b8e7c4af40d27c0b3a36b6d80b7fb5d0a37a8a59b8f5a8a52a3aa', // 삼성전자 (placeholder; resolve via Hermes if needed)
-  '000660': '0x189f0b6276a37a09', // SK하이닉스 (truncated stub — resolve at runtime)
-  '352820': '0xfe9dc190a935c61b', // HYBE (truncated stub — resolve at runtime)
+  '005930': '0x58082ed1358b8e7ce7c598f9bba441f9671dd7e6fa891b3f93fac8f9bc2f9865', // 삼성전자
+  '000660': '0x189f0b6276a37a09fa9d4305525d074d753b30d83f1d748ae12330b9c86622c2', // SK하이닉스
+  '352820': '0xfe9dc190a935c61b215171a202ffa506cab387ba76bbc6c60ba713d73730e78f', // HYBE
 };
 
 // ---------------------------------------------------------------------------
