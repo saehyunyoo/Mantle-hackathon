@@ -8,7 +8,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./polygon": "./src/polygon.ts",
-    "./pyth": "./src/pyth.ts"
+    "./pyth": "./src/pyth.ts",
+    "./snapshot": "./src/snapshot.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
