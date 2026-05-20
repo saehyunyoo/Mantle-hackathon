@@ -1,8 +1,10 @@
 import type { OraclePriceFeed } from '@jion/types';
 
 const now = '2026-05-20T14:30:00Z';
+const nowKr = '2026-05-20T01:00:00Z';
 
-export const MOCK_PRICE_FEEDS: OraclePriceFeed[] = [
+// US equities — real Pyth feed IDs (Mantle Sepolia supports these).
+const US_FEEDS: OraclePriceFeed[] = [
   {
     tokenSymbol: 'mNVDA-20260520',
     ticker: 'NVDA',
@@ -113,4 +115,129 @@ export const MOCK_PRICE_FEEDS: OraclePriceFeed[] = [
     prevPrice: 22.50,
     updatedAt: now,
   },
+];
+
+// KR equities — Pyth has 005930/000660/352820 confirmed (see docs/RESEARCH.md §1.3).
+// Others use Equity.KR.{code}/KRW naming (placeholder until Pyth coverage expands).
+const KR_FEEDS: OraclePriceFeed[] = [
+  {
+    tokenSymbol: 'm005930-20260520',
+    ticker: '005930',
+    name: 'Samsung Electronics',
+    market: 'KRX',
+    source: 'pyth',
+    feedId: 'Equity.KR.005930/KRW',
+    price: 78_500,
+    prevPrice: 77_900,
+    updatedAt: nowKr,
+  },
+  {
+    tokenSymbol: 'm000660-20260520',
+    ticker: '000660',
+    name: 'SK Hynix',
+    market: 'KRX',
+    source: 'pyth',
+    feedId: 'Equity.KR.000660/KRW',
+    price: 198_000,
+    prevPrice: 195_300,
+    updatedAt: nowKr,
+  },
+  {
+    tokenSymbol: 'm373220-20260520',
+    ticker: '373220',
+    name: 'LG Energy Solution',
+    market: 'KRX',
+    source: 'pyth',
+    feedId: 'Equity.KR.373220/KRW',
+    price: 412_000,
+    prevPrice: 415_000,
+    updatedAt: nowKr,
+  },
+  {
+    tokenSymbol: 'm207940-20260520',
+    ticker: '207940',
+    name: 'Samsung Biologics',
+    market: 'KRX',
+    source: 'pyth',
+    feedId: 'Equity.KR.207940/KRW',
+    price: 891_000,
+    prevPrice: 884_500,
+    updatedAt: nowKr,
+  },
+  {
+    tokenSymbol: 'm005380-20260520',
+    ticker: '005380',
+    name: 'Hyundai Motor',
+    market: 'KRX',
+    source: 'pyth',
+    feedId: 'Equity.KR.005380/KRW',
+    price: 245_500,
+    prevPrice: 247_000,
+    updatedAt: nowKr,
+  },
+];
+
+// JP equities — Pyth coverage TBD; mock feed IDs follow Pyth naming convention.
+const JP_FEEDS: OraclePriceFeed[] = [
+  {
+    tokenSymbol: 'm7203-20260520',
+    ticker: '7203',
+    name: 'Toyota Motor',
+    market: 'TSE',
+    source: 'pyth',
+    feedId: 'Equity.JP.7203/JPY',
+    price: 3_421,
+    prevPrice: 3_398,
+    updatedAt: nowKr,
+  },
+  {
+    tokenSymbol: 'm6758-20260520',
+    ticker: '6758',
+    name: 'Sony Group',
+    market: 'TSE',
+    source: 'pyth',
+    feedId: 'Equity.JP.6758/JPY',
+    price: 14_580,
+    prevPrice: 14_410,
+    updatedAt: nowKr,
+  },
+  {
+    tokenSymbol: 'm8035-20260520',
+    ticker: '8035',
+    name: 'Tokyo Electron',
+    market: 'TSE',
+    source: 'pyth',
+    feedId: 'Equity.JP.8035/JPY',
+    price: 31_240,
+    prevPrice: 31_820,
+    updatedAt: nowKr,
+  },
+  {
+    tokenSymbol: 'm6861-20260520',
+    ticker: '6861',
+    name: 'Keyence',
+    market: 'TSE',
+    source: 'pyth',
+    feedId: 'Equity.JP.6861/JPY',
+    price: 72_300,
+    prevPrice: 71_800,
+    updatedAt: nowKr,
+  },
+  {
+    tokenSymbol: 'm9984-20260520',
+    ticker: '9984',
+    name: 'SoftBank Group',
+    market: 'TSE',
+    source: 'pyth',
+    feedId: 'Equity.JP.9984/JPY',
+    price: 9_865,
+    prevPrice: 9_920,
+    updatedAt: nowKr,
+  },
+];
+
+export const MOCK_PRICE_FEEDS: OraclePriceFeed[] = [
+  ...US_FEEDS,
+  ...KR_FEEDS,
+  ...JP_FEEDS,
 ];
