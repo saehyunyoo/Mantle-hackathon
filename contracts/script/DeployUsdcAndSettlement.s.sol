@@ -32,8 +32,9 @@ import { Distributor } from "../src/Distributor.sol";
  */
 contract DeployUsdcAndSettlement is Script {
     /// @notice Distributor from PR #22 first deploy on Mantle Sepolia.
+    /// EIP-55 checksum as required by Solidity.
     address constant EXISTING_DISTRIBUTOR =
-        0x28656C984Ac361FE1a31CD4e13C28d97Dc838cF6;
+        0x28656c984aC361Fe1a31cD4e13c28D97dC838CF6;
 
     function run() external {
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
