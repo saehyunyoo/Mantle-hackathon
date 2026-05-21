@@ -30,7 +30,13 @@ export const MANTLE_SEPOLIA_ADDRESSES = {
   AgentLogger: '0x77edbfacfc302f01aba5d25ece57c5dc69dcb2e5',
   JionRouter: '0x08b3b7b4327c6bb464ef6c9ec84667731c0620d6',
   Distributor: '0x28656c984ac361fe1a31cd4e13c28d97dc838cf6',
-  Settlement: '0x1df047a67952f7c81d78324e968b4381c5513a70',
+  /**
+   * Settlement v2 — re-deployed 2026-05-21 with MockUSDC wired in
+   * (immutable `usdc` field forced the redeploy). Old v1 at
+   * 0x1df047a67952f7c81d78324e968b4381c5513a70 is left on-chain but
+   * no longer referenced anywhere.
+   */
+  Settlement: '0xe11527fe1939c8827cc09690fd62b03950dda3ef',
 
   // ---- Adapters ----
   SelfPoolAdapter: '0x6e9bcc3409efaf8b220d549125973cb0f180b7e2',
@@ -40,11 +46,11 @@ export const MANTLE_SEPOLIA_ADDRESSES = {
   // ---- External integrations ----
   Pyth: MANTLE_SEPOLIA_PYTH,
   /**
-   * Mock USDC for the Sepolia demo. Fill in this address after running
-   * `forge script script/DeployMockUSDC.s.sol:DeployMockUSDC --broadcast`.
+   * Mock USDC for the Sepolia demo. Deployed by DeployUsdcAndSettlement.s.sol
+   * on 2026-05-21. 6 decimals + public 1M-per-call faucet (anyone can mint).
    * Frontend MUST label this as "Mock USDC (testnet)".
    */
-  USDC: '0x0000000000000000000000000000000000000000',
+  USDC: '0x9719d0f8e2b766b842d8c810a314ace9de9f6e28',
 } as const;
 
 export type JionContractName = keyof typeof MANTLE_SEPOLIA_ADDRESSES;
