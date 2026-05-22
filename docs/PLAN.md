@@ -8,6 +8,40 @@
 
 ## 📌 Revision History
 
+> ### 🛟 2026-05-22 — **Force-settle 폐기 → Voluntary Redemption Right**
+>
+> **이전:** 24h 통합 거래량 < $10K → `Settlement` 컨트랙트가 모든 어댑터에서 일괄 회수 + 0.5% fee 차감 + 보유자 pro-rata claim (시스템 자동 트리거).
+>
+> **이후:** 자동 force-settle 폐기. 대신 홀더가 **언제든** `Settlement.redeem(token, amount)`를 호출해 **오라클 시세로 직접 환매** 가능 (GMX/Synthetix 스타일).
+>
+> **왜 바꿨나:**
+> - "Jion은 인프라, 외부 venue가 거래" 피봇 이후 — 외부 venue(MerchantMoe, Lendle)의 LP/포지션 사용자한테 강제 unwind 트리거하는 건 강압적이고 정합성 깨짐
+> - 어댑터의 `volume24h()` self-report 신뢰성 낮음. lending market은 "volume" 개념 자체가 없음 (utilization)
+> - mTICKER 재사용 모델(ticker당 토큰 1개)과 매일 burn 트리거가 모순
+> - 그러나 force-settle 그냥 폐기하면 **거래량 죽었을 때 홀더가 갇힘** → voluntary redemption으로 *영구* exit 보장
+>
+> **재설계 플로우:**
+> ```
+> holder calls Settlement.redeem(mNVDA, amount)
+>   → Pyth oracle로 NVDA/USD 시세 읽음
+>   → Distributor.unwindProportional(token, fraction)
+>     → IJionAdapter.withdraw() 모든 venue에서 비례 회수
+>   → 회수한 USDC를 holder에게 (best-effort, partial-fill 가능)
+>   → holder의 mTICKER 양만큼 burn
+>   → Redeemed(token, holder, amount, usdcOut, oraclePrice) 이벤트
+> ```
+>
+> **영향:**
+> - **§4.4 동적 생명주기** — 자동 정산 트리거 삭제, 홀더 redemption 섹션 추가
+> - **§5.2 수수료** — 0.5% 정산 수수료 → "redemption fee" 로 의미 재정의 (세현 결정: 유지/면제)
+> - **§7 자동화 잡** — `daily-volume-check` / `settle-expired` 잡 제거
+> - **부록 A 컨트랙트 구조** — `Settlement.sol` 함수 시그니처 변경 (`settle/claim` 제거, `redeem` 추가), `Distributor.unwindProportional` 추가
+> - **`IJionAdapter.volume24h()` 용도 재정의** — kill 트리거가 아니라 **router scoring + 분석용** (어댑터 시그니처는 유지)
+>
+> **세현(@saehyunyoo) 영향:**
+> - Settlement.sol + Distributor.sol 재설계 + Sepolia 재배포 필요
+> - 6개 의사결정 항목은 이슈 #33 체크박스 참고 (방향성 동의 확인됨, 세부는 그쪽에서)
+>
 > ### 🏷️ 2026-05-21 — **토큰 명명 규칙 변경 (재발행 X)**
 >
 > **이전:** 매일 top10 → `mTICKER-YYYYMMDD` 형식으로 매일 새 ERC-20 발행. 같은 ticker라도 발행일 다르면 별개 토큰.
@@ -88,7 +122,7 @@
 1. **큐레이션 자동화** — 매일 시장 개장 +1시간 시점 거래량 Top 10을 자동 스냅샷 → 합성 토큰(ERC-20) 자동 발행. 사용자는 "선택"이 아니라 "오늘의 트렌딩"을 받음.
 2. **AI 분배 라우팅 (Distribution Routing)** — 발행 직후 각 토큰을 어느 DeFi 프로토콜(AMM/렌딩/담보)에 어떤 파라미터로 상장할지 AI가 결정. 토큰 특성(거래량/변동성/시가총액)에 따라 최적 분배 전략 자동 실행.
 3. **Cross-DeFi 통합 카탈로그** — 트레이더는 "어디서 거래 가능한지" 명단을 한 곳에서. DeFi 앱은 API/구독으로 새 토큰을 자동 통합.
-4. **동적 생명주기** — 24h 통합 거래량 임계치($10K) 기준 자동 유예/정산. 모든 DeFi에서 일괄 회수 + USDC 분배.
+4. **자연 청산 + 홀더 보호** — 컨트랙트는 영구. 거래량 죽으면 시장이 알아서 정리(LP 빠짐 / lending idle). 홀더는 언제든 `Settlement.redeem()`으로 오라클 시세 환매 가능 — 갇히지 않음. 🛟 *2026-05-22 force-settle 폐기*
 
 ---
 
@@ -134,32 +168,52 @@
 - **API/구독:** DeFi 앱이 새 토큰을 자동 가져갈 수 있게 webhook + REST API (예: `GET /api/today` → 오늘 발행 토큰 + 분배 정보)
 - **신규 DeFi 추가:** 새 프로토콜이 등록되면 다음 발행 사이클부터 라우팅 후보에 포함
 
-### 4.4 생명주기 (Lifecycle) — 동적 폐기 🏷️ *2026-05-21 갱신*
+### 4.4 생명주기 (Lifecycle) — 자연 청산 + Voluntary Redemption 🛟 *2026-05-22 갱신*
 
-매일 발행 시점(개장 +1시간)에 모든 활성 토큰을 두 가지 기준으로 평가:
+mTICKER 토큰은 **영구 컨트랙트** (재발행 X). 매일 새 top10 진입 ticker만 새로 발행하고, 이탈한 ticker는 강제 burn하지 않음. 자연 청산 + 홀더 보호 두 갈래로 작동:
 
-1. **Top 10 진입 여부** — 오늘 top10에 여전히 있는지
-2. **24h 통합 거래량** — 모든 분배된 DeFi 풀 합산
+**자연 청산 (시스템은 가만히)**
 
 | 시나리오 | 조치 |
 |---|---|
-| Top 10 안에 있음 | 유지 (재발행 없음) |
-| Top 10 이탈 + 24h 거래량 ≥ $10K | **24h grace** (한 번 더 기회) |
-| Top 10 이탈 + 24h 거래량 < $10K | **강제 정산** |
+| Top 10 안에 있음 | 유지, 필요 시 추가 mint (재발행 X — 유동성 분산 방지) |
+| Top 10 이탈 | 추가 mint 없음. 컨트랙트는 그대로 살아 있음 |
 
-**강제 정산 동작:**
-- 정산 시점 오라클 가격으로 토큰 보유자에게 **USDC 환산 분배**
-- 분배된 모든 DeFi에서 일괄 회수 (LP 회수 / collateral 청산 / lending 시장 종결)
-- 컨트랙트는 종결 상태로 이동
+AMM LP는 거래 없으면 알아서 빠짐, lending market은 utilization 떨어지면 알아서 idle. 시장이 토큰을 정리함 — 시스템이 강제 burn 안 함.
 
-**근거:** $10K = DexScreener 풀 노출 최소 유동성 기준선. 한 번 인기 잃은 종목도 grace 한 번은 줌 (단순 변동 보호).
+**홀더 보호 — Voluntary Redemption Right** *(컨트랙트 신설, UI는 Phase 2+)*
+
+거래량 죽었을 때 홀더가 갇히지 않도록 **언제든** 오라클 시세로 직접 환매 가능:
+
+```
+holder calls Settlement.redeem(mTICKER, amount)
+  → Pyth oracle 시세 읽음
+  → Distributor.unwindProportional(token, fraction)
+    → IJionAdapter.withdraw() 모든 venue에서 비례 회수
+  → 회수한 USDC를 holder에게 (best-effort, partial-fill 가능)
+  → holder의 mTICKER 양만큼 burn
+  → Redeemed(...) 이벤트
+```
+
+> **데모/제출 범위:** 컨트랙트 함수(`Settlement.redeem`)는 **배포 + 테스트 케이스로 입증**하되, 홈 카드에 "Redeem at oracle" 버튼은 **넣지 않음**. 이유: 데모 viewer가 AI 라우팅 핵심 메시지 대신 "어떻게 redeem 받지?"에 시선 뺏김. 홀더 UI는 **Phase 2+ 스코프**.
+
+**이전 force-settle 정책과 비교:**
+
+| | Before (force-settle, deprecated) | After (voluntary redeem) |
+|---|---|---|
+| 트리거 | 24h vol < $10K → 시스템 자동 burn | 홀더가 원할 때 |
+| 외부 venue 영향 | 강제 unwind (LP/포지션 강탈) | 비례 unwind만 |
+| 홀더 exit 보장 | 정산 후에만 | 항상 (오라클 시세) |
+| `volume24h()` 용도 | kill 트리거 | **router scoring + 분석용**으로 재정의 |
+
+**근거:** "Jion은 인프라, 외부 venue가 거래" 피봇 이후 force-settle은 외부 venue 사용자에 대해 강압적이고 자가당착 (`mTICKER` 재사용 모델과도 모순). 이슈 #33에서 합의.
 
 ### 4.5 수익 모델
 
 | 수익원 | 비율 | 비고 |
 |---|---|---|
 | **분배 수수료** | 0.1% | 분배된 DeFi 풀의 거래 수수료 일부를 Jion 프로토콜이 retainer로 수령 |
-| **정산 수수료** | 0.5% | 강제 정산 시 토큰홀더 정산금에서 차감 |
+| **Redemption fee** | 0.5% (예정) | 홀더가 `Settlement.redeem()` 호출 시 회수 USDC에서 차감. 세현 결정에 따라 면제 가능 (#33) |
 | **B2B API** | 향후 유료 tier | DeFi 앱 대상 webhook/SLA — Phase 2 이후 |
 | **발행 수수료** | **무료** | 접근성 우선 — 프로토콜이 시드 |
 
@@ -250,8 +304,8 @@ MVP (D) → 성숙 단계 (C):
    → 토큰 한 개 선택 → "왜 이 토큰이 Merchant Moe + Lendle에 갔는지" 자연어 설명 + 대안 비교 + 분배 결정 원본 데이터(스코어 테이블)
 3. **Cross-DeFi Performance (T3)**
    → 분배된 토큰들의 각 DeFi 프로토콜별 TVL/24h volume/trader 수 통합 대시보드. "어디서 가장 잘 돌고 있는지" 한눈에.
-4. **다음날 시연 (T6)**
-   → 임계치 미달 토큰 강제 정산 → 모든 DeFi에서 일괄 회수 + 보유자에게 USDC 자동 분배
+4. **다음날 시연 (T6 갱신)** 🛟 *2026-05-22 force-settle 폐기*
+   → 홀더가 `Settlement.redeem(mTICKER, amount)` 호출 → 모든 어댑터에서 비례 회수 → 오라클 시세 USDC 환매. 강제 burn 없음, 홀더 self-trigger
 
 ---
 
@@ -378,7 +432,7 @@ contracts/
 ├─ JionPool.sol              // Uniswap V2 fork AMM (Phase 1 MVP 활성)
 ├─ JionRouter.sol            // 자체 풀 거래 진입점
 ├─ Distributor.sol           // 🆕 AI 분배 결정 → IJionAdapter 일괄 실행
-├─ Settlement.sol            // 임계치 미달 시 강제 정산 + 어댑터별 일괄 회수
+├─ Settlement.sol            // 🛟 voluntary redemption (Settlement.redeem) — 오라클 시세로 홀더 환매 (force-settle deprecated)
 ├─ AgentLogger.sol           // AI 의사결정 온체인 기록 (TokenDistribution emit)
 └─ adapters/                 // 🆕 분배 대상 어댑터 (IJionAdapter 통일)
    ├─ IJionAdapter.sol       // 인터페이스 (list / withdraw / volume24h)
@@ -402,6 +456,7 @@ contracts/
 | `issue-tokens` | 스냅샷 직후 | **새 진입 ticker만** TokenFactory 호출 (기존 활성 토큰과 비교 후 delta만 발행) |
 | `compute-distribution` | issue-tokens 직후 | 각 토큰의 분배 라우팅 결정 (휴리스틱+LLM) → `TokenDistribution` 산출 |
 | `execute-distribution` | compute-distribution 직후 | Distributor 호출 → 각 어댑터로 외부 DeFi 풀/담보 등록 |
-| `daily-volume-check` | 매일 개장 +1시간 | 분배된 모든 풀의 24h 통합 거래량 측정 → 임계치 비교 |
-| `settle-expired` | volume-check가 정산 결정 시 | Settlement 컨트랙트 → 모든 DeFi에서 회수 + USDC 분배 |
+| ~~`daily-volume-check`~~ | ~~매일 개장 +1시간~~ | 🛟 **2026-05-22 폐기** — force-settle 정책 폐기에 따라 자동 임계치 체크 잡 제거 |
+| ~~`settle-expired`~~ | ~~volume-check가 정산 결정 시~~ | 🛟 **2026-05-22 폐기** — `Settlement.redeem`은 홀더 self-trigger라서 백엔드 잡 불필요 |
 | `ai-decision-log` | 모든 AI 분배 결정 시 | AgentLogger 이벤트 emit + DB 동기화 |
+| `analytics-volume24h` *(선택)* | 시간당 | `IJionAdapter.volume24h()` 폴링 → router scoring + 대시보드 분석용 (kill 트리거 X) |
