@@ -86,9 +86,53 @@ Per-market daily total: `3M + 2 × 2M + 7 × 1M = 14M mTICKER`.
 Across NASDAQ + KRX + TSE: **42M mTICKER/day**.
 
 LP seed sizing is a separate decision made by the Distributor at fan-out time
-(typically a small percentage of `initialSupply` paired with USDC).
+(typically a small percentage of `initialSupply` paired with USDC). See §2.4.
 `computeInitialSupply(rank)` lives in `packages/types/src/supply.ts` so every
 caller (cron, scripts, tests) uses the same formula.
+
+### 2.4 LP seed sizing & MM responsibility boundary
+
+The Distributor sees a fully-minted token and decides:
+
+1. **Which venues** to list on (1-3 of the registered adapters).
+2. **What fraction of the mint** to seed into pools right now (`seedPctBps`).
+3. **How to split** that seed across the chosen venues (per-venue
+   `weightBps`).
+4. **How much USDC** to pair with each slice (always = tokens × oracle price,
+   so the pool opens at the oracle peg and no arb is left on the table).
+
+Today's heuristic (`apps/web/lib/ai/scoring.ts` → `computeListingPlan`):
+
+| Daily rank | Venues | Seed % of mint | Vault reserve |
+| --- | --- | --- | --- |
+| **#1** | 3 | 12% | 88% |
+| **#2 – #3** | 2 | 10% | 90% |
+| **#4 – #6** | 2 | 8% | 92% |
+| **#7 – #10** | 1 | 6% | 94% |
+
+**The vault reserve is NOT a market-making war chest.** Jion does not perform
+ongoing MM. The reserve exists for (a) future venue expansion when new
+adapters are registered, (b) the force-settle workflow when a token's volume
+dies, and (c) — long-term — auto-rebalance research (PLAN §5.3). It is *not*
+deployed against ongoing price drift.
+
+#### Responsibility boundary
+
+| Jion does | The venue (your adapter) does |
+| --- | --- |
+| Issue the token (`TokenFactory.issue`) | Hold the position (LP, lending account, vault) |
+| Pick the **initial listing price** = Pyth oracle | Discover price after listing (trades, MM quotes) |
+| Pick the **initial seed amounts** (tokens + USDC) | Attract additional LPs / external MMs |
+| Trigger force-settle when volume dies | Run day-to-day MM, IL hedging, fee compression |
+
+In other words: Jion is the **listing layer + price oracle**. Once a token
+is listed on your venue, your venue's existing LP/MM machinery picks it up —
+exactly as it would for any other ERC-20 listing.
+
+If your venue does not have an LP/MM ecosystem of its own (e.g. an
+isolated lending market), that's fine — read your `volume24h()` for that
+token, and Jion's force-settle workflow will recycle it back to USDC if no
+one ever shows up to trade.
 
 ---
 

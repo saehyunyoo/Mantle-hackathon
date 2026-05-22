@@ -106,7 +106,7 @@ export default async function RoutePage({ params }: RoutePageProps) {
         </div>
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
           <div className="text-[10px] uppercase tracking-wider text-zinc-500">
-            Aggregate TVL
+            Initial TVL (seeded)
           </div>
           <div className="mt-1 font-mono text-2xl font-semibold tabular-nums text-zinc-100">
             {formatUsd(totalTvl)}
@@ -121,6 +121,58 @@ export default async function RoutePage({ params }: RoutePageProps) {
           </div>
         </div>
       </div>
+
+      {distribution.initialSupplyUnits && (
+        <div className="mb-8 rounded-2xl border border-violet-500/20 bg-violet-500/[0.03] p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="text-sm font-semibold text-zinc-100">
+              Supply &amp; seed plan
+            </div>
+            <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-300">
+              AI router decision
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <SupplyMetric
+              label="Minted"
+              value={`${Number(distribution.initialSupplyUnits).toLocaleString()} ${resolved.entry.ticker}`}
+              sub={`rank #${resolved.entry.rank} · policy ${rankTierLabel(resolved.entry.rank)}`}
+            />
+            <SupplyMetric
+              label="Oracle price"
+              value={
+                distribution.oraclePriceUsd
+                  ? `$${distribution.oraclePriceUsd.toFixed(2)}`
+                  : "—"
+              }
+              sub="Pyth at issue time"
+            />
+            <SupplyMetric
+              label="Seeded to pools"
+              value={`${Number(distribution.seededTokenUnitsTotal ?? 0).toLocaleString()} ${resolved.entry.ticker}`}
+              sub={
+                distribution.seedPctBps !== undefined
+                  ? `${(distribution.seedPctBps / 100).toFixed(1)}% of mint`
+                  : ""
+              }
+            />
+            <SupplyMetric
+              label="USDC paired"
+              value={formatUsd(distribution.seededUsdcUnitsTotal ?? 0)}
+              sub="= tokens × oracle"
+            />
+          </div>
+          <p className="mt-4 text-[11px] leading-relaxed text-zinc-500">
+            <span className="text-zinc-400">Vault reserve:</span>{" "}
+            {distribution.seedPctBps !== undefined
+              ? `${((10_000 - distribution.seedPctBps) / 100).toFixed(1)}% of mint held in the protocol vault`
+              : "—"}
+            {" "}— not used for ongoing market making. Once listed, MM is each
+            venue&apos;s and external LPs&apos; responsibility (see{" "}
+            <span className="font-mono text-zinc-400">docs/TOKEN_STANDARD.md §2.4</span>).
+          </p>
+        </div>
+      )}
 
       <div className="mb-8">
         <RoutingReasoning
@@ -139,6 +191,7 @@ export default async function RoutePage({ params }: RoutePageProps) {
               key={`${l.protocol}-${l.listingAddress}`}
               listing={l}
               rank={i + 1}
+              ticker={resolved.entry.ticker}
             />
           ))}
         </div>
@@ -197,4 +250,32 @@ function ContractRef({ label, address }: { label: string; address: string }) {
       </span>
     </a>
   );
+}
+
+function SupplyMetric({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+}) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wider text-zinc-500">
+        {label}
+      </div>
+      <div className="mt-1 font-mono text-base font-semibold tabular-nums text-zinc-100">
+        {value}
+      </div>
+      {sub && <div className="mt-0.5 text-[10px] text-zinc-500">{sub}</div>}
+    </div>
+  );
+}
+
+function rankTierLabel(rank: number): string {
+  if (rank === 1) return "3× whale";
+  if (rank <= 3) return "2× head";
+  return "1× base";
 }

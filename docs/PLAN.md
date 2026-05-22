@@ -115,7 +115,7 @@
 - **발행가:** 오라클(Pyth Network) 시세 = 1 토큰 가격
 - **유통:** Jion은 직접 AMM 운영 안 함. 발행 직후 AI 라우팅 결과대로 **외부 DeFi 프로토콜에 자동 분배** (4.2 참고)
 
-### 4.2 분배 (Distribution) — Jion의 핵심 🆕 *2026-05-20 신설 / 🔧 PM 하이브리드 조정*
+### 4.2 분배 (Distribution) — Jion의 핵심 🆕 *2026-05-20 신설 / 🔧 PM 하이브리드 조정 / 🎯 2026-05-22 MM 외주 명시*
 
 발행된 토큰을 **AI가 결정한 라우팅대로 분배 대상에 자동 상장/시드**한다. 분배 대상은 `IJionAdapter` 인터페이스를 구현한 어댑터 컨트랙트(부록 A).
 
@@ -125,9 +125,25 @@
   - AMM: Merchant Moe / Fluxion / Agni Finance
   - 렌딩/담보: Lendle / Init Capital
 - **분배 결정 입력:** 토큰 거래량 랭크, 변동성, 시가총액, 풀 깊이, 프로토콜별 fee tier
-- **분배 결정 출력:** `TokenDistribution { listings: DeFiListing[], routingReasoning: string }` — 어떤 어댑터에 어떤 kind(AMM/담보/렌딩)로 얼마 시드할지 + 자연어 설명
+- **분배 결정 출력:** `TokenDistribution { listings: DeFiListing[], routingReasoning: string, initialSupplyUnits, oraclePriceUsd, seededTokenUnitsTotal, seededUsdcUnitsTotal, seedPctBps }` — 어떤 어댑터에 **얼마(토큰 + USDC)** 시드할지 + 자연어 설명
 - **실행:** `Distributor` 컨트랙트가 `IJionAdapter`의 `list()` 함수를 일괄 호출 (Phase 1엔 SelfPoolAdapter만, Phase 2+엔 외부 어댑터 추가)
 - **거래는 분배된 곳에서:** Phase 1엔 JionPool에서, Phase 2+엔 외부 Mantle DeFi에서. Jion 사이트는 카탈로그/모니터링만.
+
+#### 4.2.1 책임 경계 — Jion vs Venue (MM 외주 정책) 🎯 *2026-05-22 명시*
+
+| 우리(Jion 프로토콜) 책임 | venue (DEX/Lending 프로토콜) 책임 |
+|---|---|
+| **상장 (Listing)** — `IJionAdapter.list()` 트리거 | 상장 후 풀 운영 / 매칭 |
+| **초기 가격** — Pyth 오라클 spot로 시드 비율 결정 | 거래 발생 후 가격 발견 (price discovery) |
+| **초기 시드** — 발행량의 일정 % + USDC 1회 입금 | 추가 LP 모집 / 운영 |
+| **시드 사이즈 결정** — AI 라우터가 venue별 weightBps 결정 | venue 자체 fee tier / tick size 설계 |
+| **정산 트리거** — 거래량 미달 시 `withdraw()` 호출 | 그 외 일상 운영 |
+
+**핵심:** Jion은 **listing party + initial price + initial seed** 만 제공. **ongoing market making** (스프레드 관리, IL 헤지, inventory rebalancing, 추가 유동성 모집)은 **venue 자체 LP 풀 + 외부 LP/MM 펌**의 책임. 그래서 시드 % 의 나머지(예: 88-94%)는 vault에 보관하되, **자동 리밸런싱용이 아니라 신규 venue 확장/긴급 정산 대비용 reserve**.
+
+이 책임 경계가 PLAN의 핵심 셀링 포인트인 **"분배 라우팅 인프라"** 의 의미를 명확히 함:
+- "AI MM" (X — 우리는 MM 하지 않음)
+- "AI Distribution Routing" (O — 어디로 / 얼마나 분배할지만 결정)
 
 ### 4.3 외부 통합 (B2B Integration)
 
