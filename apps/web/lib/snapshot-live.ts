@@ -6,8 +6,9 @@
  *      they own the ranking, volumes, and ticker lists.
  *   2. For tickers that have a known Pyth feed id, hit Hermes for live
  *      USD prices and overlay them on the mock `entry.price`.
- *   3. Tickers without a Pyth feed (e.g. AVGO, PLTR, all TSE) keep their
- *      mock prices. The whole snapshot keeps working if Pyth is down.
+ *   3. Tickers without a Pyth feed keep their mock prices. The whole
+ *      snapshot keeps working if Pyth is down. As of 2026-05-22 the
+ *      mock fixture is fully covered across NASDAQ/KRX/TSE.
  *
  * Why we keep mock volumes:
  *   - Polygon.io (the only intraday volume source we have plumbed) requires
@@ -29,6 +30,7 @@
  *     status stays 'live'. Coverage count reflects what actually landed.
  */
 import {
+  PYTH_FEED_IDS_JP,
   PYTH_FEED_IDS_KR,
   PYTH_FEED_IDS_US,
   fetchPythPricesByTicker,
@@ -55,18 +57,16 @@ export interface LiveSnapshotResult {
  * rest fall back to mock prices.
  */
 function knownTickersFor(snapshot: MarketSnapshot): string[] {
-  if (snapshot.market === "NASDAQ") {
-    return snapshot.entries
-      .map((e) => e.ticker)
-      .filter((t) => t in PYTH_FEED_IDS_US);
-  }
-  if (snapshot.market === "KRX") {
-    return snapshot.entries
-      .map((e) => e.ticker)
-      .filter((t) => t in PYTH_FEED_IDS_KR);
-  }
-  // TSE — no Pyth feed table yet.
-  return [];
+  const table =
+    snapshot.market === "NASDAQ"
+      ? PYTH_FEED_IDS_US
+      : snapshot.market === "KRX"
+        ? PYTH_FEED_IDS_KR
+        : snapshot.market === "TSE"
+          ? PYTH_FEED_IDS_JP
+          : null;
+  if (!table) return []; // HKEX / LSE — no feed table.
+  return snapshot.entries.map((e) => e.ticker).filter((t) => t in table);
 }
 
 export async function getLiveSnapshots(): Promise<LiveSnapshotResult> {
