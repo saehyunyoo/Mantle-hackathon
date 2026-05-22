@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  MOCK_DISTRIBUTIONS_TODAY,
-  MOCK_SNAPSHOTS_TODAY,
-} from "@jion/mocks";
 import { MANTLE_SEPOLIA_ADDRESSES } from "@jion/types";
 import { ListingDetailCard } from "@/components/listing-detail-card";
 import { RoutingReasoning } from "@/components/routing-reasoning";
 import { AlternativeComparison } from "@/components/alternative-comparison";
 import { formatUsd } from "@/lib/format";
 import { explorerAddress, shortAddress } from "@/lib/explorer";
+import { isClaudeEnabled } from "@/lib/ai/claude";
+import {
+  findEntryBySymbol,
+  routeDistribution,
+} from "@/lib/ai/distribution-router";
 
 interface RoutePageProps {
   params: Promise<{ symbol: string }>;
@@ -18,18 +19,14 @@ interface RoutePageProps {
 export default async function RoutePage({ params }: RoutePageProps) {
   const { symbol } = await params;
   const decodedSymbol = decodeURIComponent(symbol);
-  const distribution = MOCK_DISTRIBUTIONS_TODAY.find(
-    (d) => d.tokenSymbol === decodedSymbol,
-  );
 
-  if (!distribution) {
+  const resolved = findEntryBySymbol(decodedSymbol);
+  if (!resolved) {
     notFound();
   }
 
-  const ticker = decodedSymbol.split("-")[0]?.replace(/^m/, "") ?? "";
-  const entry = MOCK_SNAPSHOTS_TODAY.flatMap((s) => s.entries).find(
-    (e) => e.ticker === ticker,
-  );
+  const distribution = await routeDistribution(resolved);
+  const claudeOn = isClaudeEnabled();
 
   const totalTvl = distribution.listings.reduce((s, l) => s + l.tvlUsd, 0);
   const totalVolume = distribution.listings.reduce(
@@ -57,14 +54,30 @@ export default async function RoutePage({ params }: RoutePageProps) {
           <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
             Mantle Sepolia
           </span>
+          <span
+            className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+              claudeOn
+                ? "border-violet-500/30 bg-violet-500/10 text-violet-300"
+                : "border-zinc-700 bg-zinc-800/60 text-zinc-400"
+            }`}
+            title={
+              claudeOn
+                ? "Live Claude inference + heuristic"
+                : "Heuristic-only (set ANTHROPIC_API_KEY for live Claude reasoning)"
+            }
+          >
+            {claudeOn ? "Claude · live" : "Heuristic"}
+          </span>
         </div>
         <h1 className="text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
-          {entry?.name ?? ticker}
+          {resolved.entry.name}
         </h1>
         <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm text-zinc-400">
           <span>
             Ticker{" "}
-            <span className="font-medium text-zinc-200">{ticker}</span>
+            <span className="font-medium text-zinc-200">
+              {resolved.entry.ticker}
+            </span>
           </span>
           <span>
             Token{" "}
@@ -157,10 +170,14 @@ export default async function RoutePage({ params }: RoutePageProps) {
       </div>
 
       <footer className="border-t border-zinc-900 pt-6 text-xs text-zinc-600">
-        Mock distribution shown (T2). Wire to live{" "}
-        <span className="font-mono">Distributor</span> reads in follow-up PR.
-        External adapter listings (Merchant Moe / Lendle) currently point to
-        Mock adapters deployed on Sepolia (T8) — labeled as such for honesty.
+        Routing computed live by{" "}
+        <span className="font-mono">lib/ai/distribution-router</span>:
+        heuristic scoring (volume × volatility × venue fit) +{" "}
+        {claudeOn
+          ? "Claude reasoning."
+          : "fallback narrative (set ANTHROPIC_API_KEY for Claude live)."}{" "}
+        External adapter listings point to Mock adapters on Sepolia (T8) — labeled
+        as such for honesty.
       </footer>
     </main>
   );
