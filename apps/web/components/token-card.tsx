@@ -43,9 +43,15 @@ function ListingPill({ listing }: { listing: DeFiListing }) {
       target="_blank"
       rel="noreferrer"
       className="inline-flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-800/60 px-2.5 py-1 text-[10px] font-medium text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-800 hover:text-zinc-50"
-      title={`${listing.kind} on ${PROTOCOL_LABEL[listing.protocol]} — TVL ${formatUsd(listing.tvlUsd)}`}
+      title={`${listing.kind} on ${PROTOCOL_LABEL[listing.protocol]} — TVL ${formatUsd(listing.tvlUsd)} · Mock listing (Phase 2+ live integration)`}
     >
       {PROTOCOL_LABEL[listing.protocol] ?? listing.protocol}
+      <span
+        className="rounded-sm border border-amber-700/40 bg-amber-900/20 px-1 py-px text-[8px] font-semibold uppercase tracking-wider text-amber-400"
+        title="Mock listing — real venue integration in Phase 2+"
+      >
+        Mock
+      </span>
       <span className="text-zinc-500">↗</span>
     </a>
   );
