@@ -51,7 +51,13 @@ contract TokenFactory is Ownable {
      * @param underlying_   ticker
      * @param market_       "NASDAQ" / "KRX" / "TSE"
      * @param pythFeedId_   bytes32 Pyth feed id
-     * @param initialSupply initial mint amount (wei)
+     * @param initialSupply initial mint amount (wei).
+     *                      Policy: rank-tier issuance — #1=3× / #2-#3=2× /
+     *                      #4-#10=1× a 1M-unit base (1e6 × 10**18 wei).
+     *                      Computed off-chain by the cron signer; the factory
+     *                      itself is policy-agnostic. See
+     *                      `packages/types/src/supply.ts` (`computeInitialSupply`)
+     *                      and docs/TOKEN_STANDARD.md §2.3.
      */
     function issue(
         string calldata name_,

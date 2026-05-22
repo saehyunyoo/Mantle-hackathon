@@ -68,6 +68,28 @@ without trusting Jion's own oracle, (c) decide whether the token is still alive
 - Holders cannot mint/burn directly. All supply changes happen through
   `TokenFactory` (mint) or `Settlement` (burn on force-settle).
 
+### 2.3 Supply policy — rank-tier issuance
+
+The initial mint amount is decided **off-chain by the cron signer** (the
+TokenFactory itself accepts `initialSupply` as a parameter and does not enforce
+the policy). The standard scales with the daily volume rank within each market,
+so high-demand tickers get proportionally deeper float without changing the
+USD-denominated seed:
+
+| Daily rank | Multiplier | Initial supply | Why |
+| --- | --- | --- | --- |
+| **#1** | **3×** | **3,000,000 mTICKER** | Whale — the day's single market leader |
+| **#2 – #3** | **2×** | **2,000,000 mTICKER** | Head — high-volume followers |
+| **#4 – #10** | **1×** | **1,000,000 mTICKER** | Base — long tail of the top-10 |
+
+Per-market daily total: `3M + 2 × 2M + 7 × 1M = 14M mTICKER`.
+Across NASDAQ + KRX + TSE: **42M mTICKER/day**.
+
+LP seed sizing is a separate decision made by the Distributor at fan-out time
+(typically a small percentage of `initialSupply` paired with USDC).
+`computeInitialSupply(rank)` lives in `packages/types/src/supply.ts` so every
+caller (cron, scripts, tests) uses the same formula.
+
 ---
 
 ## 3. IJionAdapter — the interface you implement
