@@ -11,7 +11,7 @@ export const MOCK_MARKETS: Market[] = [
   },
   {
     code: 'KRX',
-    name: 'KRX (Korea Exchange)',
+    name: 'Korea Stock Market',
     timezone: 'Asia/Seoul',
     openHour: 9,
     snapshotHour: 10,
