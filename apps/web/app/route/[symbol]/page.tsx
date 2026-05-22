@@ -12,6 +12,9 @@ import {
   routeDistribution,
 } from "@/lib/ai/distribution-router";
 
+/** Cache Pyth-enriched route page for 60s, matching the home page window. */
+export const revalidate = 60;
+
 interface RoutePageProps {
   params: Promise<{ symbol: string }>;
 }
@@ -20,7 +23,7 @@ export default async function RoutePage({ params }: RoutePageProps) {
   const { symbol } = await params;
   const decodedSymbol = decodeURIComponent(symbol);
 
-  const resolved = findEntryBySymbol(decodedSymbol);
+  const resolved = await findEntryBySymbol(decodedSymbol);
   if (!resolved) {
     notFound();
   }
