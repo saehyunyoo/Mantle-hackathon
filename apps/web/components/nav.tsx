@@ -20,6 +20,12 @@ export function Nav() {
             Trending
           </Link>
           <Link
+            href="/reasoning"
+            className="rounded-lg px-3 py-1.5 text-sm text-zinc-300 transition hover:bg-zinc-900 hover:text-zinc-100"
+          >
+            Reasoning
+          </Link>
+          <Link
             href="/performance"
             className="rounded-lg px-3 py-1.5 text-sm text-zinc-300 transition hover:bg-zinc-900 hover:text-zinc-100"
           >
