@@ -3,6 +3,7 @@ import {
   MOCK_MARKETS,
   MOCK_SNAPSHOTS_TODAY,
 } from "@jion/mocks";
+import { HowItWorks } from "@/components/how-it-works";
 import { MarketTabs } from "@/components/market-tabs";
 
 export default function Home() {
@@ -25,6 +26,8 @@ export default function Home() {
           and AI-routed across Mantle DeFi. Trade them where they live — not here.
         </p>
       </header>
+
+      <HowItWorks />
 
       <MarketTabs
         snapshots={MOCK_SNAPSHOTS_TODAY}
