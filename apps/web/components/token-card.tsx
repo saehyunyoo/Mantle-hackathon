@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type {
   DeFiListing,
   MarketCode,
@@ -26,6 +27,14 @@ const ISSUE_DATE_FORMAT: Intl.DateTimeFormatOptions = {
   day: "numeric",
   year: "numeric",
 };
+
+const TOTAL_CANDIDATE_PROTOCOLS = 5;
+
+function shortReasoning(text: string, maxChars = 120): string {
+  const firstSentence = text.split(/(?<=[.!?])\s/)[0] ?? text;
+  if (firstSentence.length <= maxChars) return firstSentence;
+  return firstSentence.slice(0, maxChars).trimEnd() + "…";
+}
 
 function ListingPill({ listing }: { listing: DeFiListing }) {
   return (
@@ -113,24 +122,45 @@ export function TokenCard({
         </div>
       </div>
 
-      <div className="mb-4">
-        <div className="mb-2 text-[10px] uppercase tracking-wider text-zinc-500">
-          {distribution
-            ? `Routed to ${distribution.listings.length} venue${distribution.listings.length === 1 ? "" : "s"}`
-            : "Routing pending"}
-        </div>
-        {distribution ? (
-          <div className="flex flex-wrap gap-1.5">
+      {distribution ? (
+        <div className="mb-4 rounded-xl border border-violet-500/30 bg-violet-500/[0.04] p-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-violet-300">
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-violet-500/20 text-[9px]">
+                AI
+              </span>
+              AI Routed
+            </span>
+            <span className="font-mono text-[10px] text-zinc-500">
+              Picked {distribution.listings.length} of{" "}
+              {TOTAL_CANDIDATE_PROTOCOLS} candidates
+            </span>
+          </div>
+          <p className="mb-3 text-[11px] leading-relaxed text-zinc-300">
+            &ldquo;{shortReasoning(distribution.routingReasoning)}&rdquo;
+          </p>
+          <div className="mb-3 flex flex-wrap gap-1.5">
             {distribution.listings.map((l) => (
               <ListingPill key={`${l.protocol}-${l.listingAddress}`} listing={l} />
             ))}
           </div>
-        ) : (
-          <div className="text-[11px] text-zinc-600">
-            AI distribution will be assigned at issuance.
+          <Link
+            href={`/route/${encodeURIComponent(distribution.tokenSymbol)}`}
+            className="inline-flex items-center text-[10px] font-medium uppercase tracking-wider text-violet-300 hover:text-violet-200"
+          >
+            View routing →
+          </Link>
+        </div>
+      ) : (
+        <div className="mb-4 rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
+          <div className="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">
+            Routing soon
           </div>
-        )}
-      </div>
+          <div className="text-[11px] text-zinc-600">
+            AI will assign best venues at issuance.
+          </div>
+        </div>
+      )}
 
       <div className="mt-auto border-t border-zinc-800 pt-4">
         <div className="mb-1 flex items-baseline gap-2">

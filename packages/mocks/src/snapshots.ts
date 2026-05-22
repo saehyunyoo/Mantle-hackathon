@@ -1,9 +1,9 @@
 import type { MarketSnapshot } from '@jion/types';
 
 export const MOCK_SNAPSHOT_NASDAQ: MarketSnapshot = {
-  id: 'NASDAQ-2026-05-18',
+  id: 'NASDAQ-2026-05-20',
   market: 'NASDAQ',
-  capturedAt: '2026-05-18T14:30:00Z',
+  capturedAt: '2026-05-20T14:30:00Z',
   entries: [
     { rank: 1, ticker: 'NVDA', name: 'NVIDIA Corp', volume1h: 1_280_000_000, price: 942.31 },
     { rank: 2, ticker: 'TSLA', name: 'Tesla Inc', volume1h: 845_000_000, price: 178.42 },
@@ -19,9 +19,9 @@ export const MOCK_SNAPSHOT_NASDAQ: MarketSnapshot = {
 };
 
 export const MOCK_SNAPSHOT_KRX: MarketSnapshot = {
-  id: 'KRX-2026-05-18',
+  id: 'KRX-2026-05-20',
   market: 'KRX',
-  capturedAt: '2026-05-18T01:00:00Z',
+  capturedAt: '2026-05-20T01:00:00Z',
   entries: [
     { rank: 1, ticker: '005930', name: 'Samsung Electronics', volume1h: 285_000_000, price: 78_500 },
     { rank: 2, ticker: '000660', name: 'SK Hynix', volume1h: 198_000_000, price: 198_000 },
@@ -37,9 +37,9 @@ export const MOCK_SNAPSHOT_KRX: MarketSnapshot = {
 };
 
 export const MOCK_SNAPSHOT_TSE: MarketSnapshot = {
-  id: 'TSE-2026-05-18',
+  id: 'TSE-2026-05-20',
   market: 'TSE',
-  capturedAt: '2026-05-18T01:00:00Z',
+  capturedAt: '2026-05-20T01:00:00Z',
   entries: [
     { rank: 1, ticker: '7203', name: 'Toyota Motor', volume1h: 198_000_000, price: 3_421 },
     { rank: 2, ticker: '6758', name: 'Sony Group', volume1h: 142_000_000, price: 14_580 },
