@@ -7,3 +7,4 @@ export * from './settlement';
 export * from './oracle';
 export * from './distribution';
 export * from './addresses';
+export * from './supply';
