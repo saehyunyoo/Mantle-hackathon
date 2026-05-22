@@ -11,6 +11,12 @@ interface MarketTabsProps {
   distributions: TokenDistribution[];
 }
 
+const MARKET_FLAG: Record<string, string> = {
+  NASDAQ: "🇺🇸",
+  KRX: "🇰🇷",
+  TSE: "🇯🇵",
+};
+
 export function MarketTabs({
   snapshots,
   marketNames,
@@ -47,6 +53,7 @@ export function MarketTabs({
                 : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
+            <span className="mr-1.5">{MARKET_FLAG[s.market] ?? "🌐"}</span>
             {marketNames[s.market] ?? s.market}
           </button>
         ))}
