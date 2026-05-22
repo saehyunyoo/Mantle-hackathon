@@ -31,6 +31,12 @@ export function Nav() {
           >
             Oracle Feed
           </Link>
+          <Link
+            href="/integrate"
+            className="rounded-lg px-3 py-1.5 text-sm text-zinc-300 transition hover:bg-zinc-900 hover:text-zinc-100"
+          >
+            Build
+          </Link>
         </div>
       </div>
     </nav>
