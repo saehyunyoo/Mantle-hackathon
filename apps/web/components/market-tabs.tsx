@@ -75,7 +75,7 @@ export function MarketTabs({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {active.entries.map((entry, idx) => {
-          const symbol = `m${entry.ticker}-${active.capturedAt.slice(0, 10).replaceAll("-", "")}`;
+          const symbol = `m${entry.ticker}`;
           return (
             <TokenCard
               key={`${active.market}-${entry.ticker}`}

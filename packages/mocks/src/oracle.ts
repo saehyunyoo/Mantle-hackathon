@@ -6,7 +6,7 @@ const nowKr = '2026-05-20T01:00:00Z';
 // US equities — real Pyth feed IDs (Mantle Sepolia supports these).
 const US_FEEDS: OraclePriceFeed[] = [
   {
-    tokenSymbol: 'mNVDA-20260520',
+    tokenSymbol: 'mNVDA',
     ticker: 'NVDA',
     name: 'NVIDIA Corp',
     market: 'NASDAQ',
@@ -17,7 +17,7 @@ const US_FEEDS: OraclePriceFeed[] = [
     updatedAt: now,
   },
   {
-    tokenSymbol: 'mTSLA-20260520',
+    tokenSymbol: 'mTSLA',
     ticker: 'TSLA',
     name: 'Tesla Inc',
     market: 'NASDAQ',
@@ -28,7 +28,7 @@ const US_FEEDS: OraclePriceFeed[] = [
     updatedAt: now,
   },
   {
-    tokenSymbol: 'mAAPL-20260520',
+    tokenSymbol: 'mAAPL',
     ticker: 'AAPL',
     name: 'Apple Inc',
     market: 'NASDAQ',
@@ -39,7 +39,7 @@ const US_FEEDS: OraclePriceFeed[] = [
     updatedAt: now,
   },
   {
-    tokenSymbol: 'mMSFT-20260520',
+    tokenSymbol: 'mMSFT',
     ticker: 'MSFT',
     name: 'Microsoft Corp',
     market: 'NASDAQ',
@@ -50,7 +50,7 @@ const US_FEEDS: OraclePriceFeed[] = [
     updatedAt: now,
   },
   {
-    tokenSymbol: 'mAMD-20260520',
+    tokenSymbol: 'mAMD',
     ticker: 'AMD',
     name: 'Advanced Micro Devices',
     market: 'NASDAQ',
@@ -61,7 +61,7 @@ const US_FEEDS: OraclePriceFeed[] = [
     updatedAt: now,
   },
   {
-    tokenSymbol: 'mMETA-20260520',
+    tokenSymbol: 'mMETA',
     ticker: 'META',
     name: 'Meta Platforms',
     market: 'NASDAQ',
@@ -72,7 +72,7 @@ const US_FEEDS: OraclePriceFeed[] = [
     updatedAt: now,
   },
   {
-    tokenSymbol: 'mAMZN-20260520',
+    tokenSymbol: 'mAMZN',
     ticker: 'AMZN',
     name: 'Amazon.com',
     market: 'NASDAQ',
@@ -83,7 +83,7 @@ const US_FEEDS: OraclePriceFeed[] = [
     updatedAt: now,
   },
   {
-    tokenSymbol: 'mGOOGL-20260520',
+    tokenSymbol: 'mGOOGL',
     ticker: 'GOOGL',
     name: 'Alphabet Class A',
     market: 'NASDAQ',
@@ -94,7 +94,7 @@ const US_FEEDS: OraclePriceFeed[] = [
     updatedAt: now,
   },
   {
-    tokenSymbol: 'mAVGO-20260520',
+    tokenSymbol: 'mAVGO',
     ticker: 'AVGO',
     name: 'Broadcom Inc',
     market: 'NASDAQ',
@@ -105,7 +105,7 @@ const US_FEEDS: OraclePriceFeed[] = [
     updatedAt: now,
   },
   {
-    tokenSymbol: 'mPLTR-20260520',
+    tokenSymbol: 'mPLTR',
     ticker: 'PLTR',
     name: 'Palantir Technologies',
     market: 'NASDAQ',
@@ -121,7 +121,7 @@ const US_FEEDS: OraclePriceFeed[] = [
 // Others use Equity.KR.{code}/KRW naming (placeholder until Pyth coverage expands).
 const KR_FEEDS: OraclePriceFeed[] = [
   {
-    tokenSymbol: 'm005930-20260520',
+    tokenSymbol: 'm005930',
     ticker: '005930',
     name: 'Samsung Electronics',
     market: 'KRX',
@@ -132,7 +132,7 @@ const KR_FEEDS: OraclePriceFeed[] = [
     updatedAt: nowKr,
   },
   {
-    tokenSymbol: 'm000660-20260520',
+    tokenSymbol: 'm000660',
     ticker: '000660',
     name: 'SK Hynix',
     market: 'KRX',
@@ -143,7 +143,7 @@ const KR_FEEDS: OraclePriceFeed[] = [
     updatedAt: nowKr,
   },
   {
-    tokenSymbol: 'm373220-20260520',
+    tokenSymbol: 'm373220',
     ticker: '373220',
     name: 'LG Energy Solution',
     market: 'KRX',
@@ -154,7 +154,7 @@ const KR_FEEDS: OraclePriceFeed[] = [
     updatedAt: nowKr,
   },
   {
-    tokenSymbol: 'm207940-20260520',
+    tokenSymbol: 'm207940',
     ticker: '207940',
     name: 'Samsung Biologics',
     market: 'KRX',
@@ -165,7 +165,7 @@ const KR_FEEDS: OraclePriceFeed[] = [
     updatedAt: nowKr,
   },
   {
-    tokenSymbol: 'm005380-20260520',
+    tokenSymbol: 'm005380',
     ticker: '005380',
     name: 'Hyundai Motor',
     market: 'KRX',
@@ -180,7 +180,7 @@ const KR_FEEDS: OraclePriceFeed[] = [
 // JP equities — Pyth coverage TBD; mock feed IDs follow Pyth naming convention.
 const JP_FEEDS: OraclePriceFeed[] = [
   {
-    tokenSymbol: 'm7203-20260520',
+    tokenSymbol: 'm7203',
     ticker: '7203',
     name: 'Toyota Motor',
     market: 'TSE',
@@ -191,7 +191,7 @@ const JP_FEEDS: OraclePriceFeed[] = [
     updatedAt: nowKr,
   },
   {
-    tokenSymbol: 'm6758-20260520',
+    tokenSymbol: 'm6758',
     ticker: '6758',
     name: 'Sony Group',
     market: 'TSE',
@@ -202,7 +202,7 @@ const JP_FEEDS: OraclePriceFeed[] = [
     updatedAt: nowKr,
   },
   {
-    tokenSymbol: 'm8035-20260520',
+    tokenSymbol: 'm8035',
     ticker: '8035',
     name: 'Tokyo Electron',
     market: 'TSE',
@@ -213,7 +213,7 @@ const JP_FEEDS: OraclePriceFeed[] = [
     updatedAt: nowKr,
   },
   {
-    tokenSymbol: 'm6861-20260520',
+    tokenSymbol: 'm6861',
     ticker: '6861',
     name: 'Keyence',
     market: 'TSE',
@@ -224,7 +224,7 @@ const JP_FEEDS: OraclePriceFeed[] = [
     updatedAt: nowKr,
   },
   {
-    tokenSymbol: 'm9984-20260520',
+    tokenSymbol: 'm9984',
     ticker: '9984',
     name: 'SoftBank Group',
     market: 'TSE',

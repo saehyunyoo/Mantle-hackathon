@@ -4,7 +4,7 @@ const generatedAt = '2026-05-20T14:31:00Z';
 
 export const MOCK_DISTRIBUTIONS_TODAY: TokenDistribution[] = [
   {
-    tokenSymbol: 'mNVDA-20260520',
+    tokenSymbol: 'mNVDA',
     tokenAddress: '0xa1aA00000000000000000000000000000000aA01',
     generatedAt,
     routingReasoning:
@@ -31,7 +31,7 @@ export const MOCK_DISTRIBUTIONS_TODAY: TokenDistribution[] = [
     ],
   },
   {
-    tokenSymbol: 'mTSLA-20260520',
+    tokenSymbol: 'mTSLA',
     tokenAddress: '0xa1aA00000000000000000000000000000000aA02',
     generatedAt,
     routingReasoning:
@@ -58,7 +58,7 @@ export const MOCK_DISTRIBUTIONS_TODAY: TokenDistribution[] = [
     ],
   },
   {
-    tokenSymbol: 'mAAPL-20260520',
+    tokenSymbol: 'mAAPL',
     tokenAddress: '0xa1aA00000000000000000000000000000000aA03',
     generatedAt,
     routingReasoning:
@@ -83,7 +83,7 @@ export const MOCK_DISTRIBUTIONS_TODAY: TokenDistribution[] = [
     ],
   },
   {
-    tokenSymbol: 'mMSFT-20260520',
+    tokenSymbol: 'mMSFT',
     tokenAddress: '0xa1aA00000000000000000000000000000000aA04',
     generatedAt,
     routingReasoning: 'Mega-cap stable. Single deep Merchant Moe pool — concentration optimal given fee tier.',
@@ -99,7 +99,7 @@ export const MOCK_DISTRIBUTIONS_TODAY: TokenDistribution[] = [
     ],
   },
   {
-    tokenSymbol: 'mAMD-20260520',
+    tokenSymbol: 'mAMD',
     tokenAddress: '0xa1aA00000000000000000000000000000000aA05',
     generatedAt,
     routingReasoning:
@@ -126,7 +126,7 @@ export const MOCK_DISTRIBUTIONS_TODAY: TokenDistribution[] = [
 
   // ---------------- KRX (Korean equities) ----------------
   {
-    tokenSymbol: 'm005930-20260520',
+    tokenSymbol: 'm005930',
     tokenAddress: '0xa1aA00000000000000000000000000000000aB01',
     generatedAt,
     routingReasoning:
@@ -153,7 +153,7 @@ export const MOCK_DISTRIBUTIONS_TODAY: TokenDistribution[] = [
     ],
   },
   {
-    tokenSymbol: 'm000660-20260520',
+    tokenSymbol: 'm000660',
     tokenAddress: '0xa1aA00000000000000000000000000000000aB02',
     generatedAt,
     routingReasoning:
@@ -179,7 +179,7 @@ export const MOCK_DISTRIBUTIONS_TODAY: TokenDistribution[] = [
     ],
   },
   {
-    tokenSymbol: 'm373220-20260520',
+    tokenSymbol: 'm373220',
     tokenAddress: '0xa1aA00000000000000000000000000000000aB03',
     generatedAt,
     routingReasoning:
@@ -204,7 +204,7 @@ export const MOCK_DISTRIBUTIONS_TODAY: TokenDistribution[] = [
     ],
   },
   {
-    tokenSymbol: 'm207940-20260520',
+    tokenSymbol: 'm207940',
     tokenAddress: '0xa1aA00000000000000000000000000000000aB04',
     generatedAt,
     routingReasoning:
@@ -221,7 +221,7 @@ export const MOCK_DISTRIBUTIONS_TODAY: TokenDistribution[] = [
     ],
   },
   {
-    tokenSymbol: 'm005380-20260520',
+    tokenSymbol: 'm005380',
     tokenAddress: '0xa1aA00000000000000000000000000000000aB05',
     generatedAt,
     routingReasoning:
@@ -248,7 +248,7 @@ export const MOCK_DISTRIBUTIONS_TODAY: TokenDistribution[] = [
 
   // ---------------- TSE (Japanese equities) ----------------
   {
-    tokenSymbol: 'm7203-20260520',
+    tokenSymbol: 'm7203',
     tokenAddress: '0xa1aA00000000000000000000000000000000aC01',
     generatedAt,
     routingReasoning:
@@ -274,7 +274,7 @@ export const MOCK_DISTRIBUTIONS_TODAY: TokenDistribution[] = [
     ],
   },
   {
-    tokenSymbol: 'm6758-20260520',
+    tokenSymbol: 'm6758',
     tokenAddress: '0xa1aA00000000000000000000000000000000aC02',
     generatedAt,
     routingReasoning:
@@ -299,7 +299,7 @@ export const MOCK_DISTRIBUTIONS_TODAY: TokenDistribution[] = [
     ],
   },
   {
-    tokenSymbol: 'm8035-20260520',
+    tokenSymbol: 'm8035',
     tokenAddress: '0xa1aA00000000000000000000000000000000aC03',
     generatedAt,
     routingReasoning:
@@ -316,7 +316,7 @@ export const MOCK_DISTRIBUTIONS_TODAY: TokenDistribution[] = [
     ],
   },
   {
-    tokenSymbol: 'm6861-20260520',
+    tokenSymbol: 'm6861',
     tokenAddress: '0xa1aA00000000000000000000000000000000aC04',
     generatedAt,
     routingReasoning:
@@ -341,7 +341,7 @@ export const MOCK_DISTRIBUTIONS_TODAY: TokenDistribution[] = [
     ],
   },
   {
-    tokenSymbol: 'm9984-20260520',
+    tokenSymbol: 'm9984',
     tokenAddress: '0xa1aA00000000000000000000000000000000aC05',
     generatedAt,
     routingReasoning:

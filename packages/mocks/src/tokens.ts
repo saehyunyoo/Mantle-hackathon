@@ -2,7 +2,7 @@ import type { JionToken } from '@jion/types';
 
 export const MOCK_TOKENS_TODAY: JionToken[] = [
   {
-    symbol: 'mNVDA-20260518',
+    symbol: 'mNVDA',
     ticker: 'NVDA',
     name: 'NVIDIA Corp',
     market: 'NASDAQ',
@@ -13,7 +13,7 @@ export const MOCK_TOKENS_TODAY: JionToken[] = [
     status: 'active',
   },
   {
-    symbol: 'mTSLA-20260518',
+    symbol: 'mTSLA',
     ticker: 'TSLA',
     name: 'Tesla Inc',
     market: 'NASDAQ',
@@ -24,7 +24,7 @@ export const MOCK_TOKENS_TODAY: JionToken[] = [
     status: 'active',
   },
   {
-    symbol: 'mAAPL-20260518',
+    symbol: 'mAAPL',
     ticker: 'AAPL',
     name: 'Apple Inc',
     market: 'NASDAQ',
@@ -35,7 +35,7 @@ export const MOCK_TOKENS_TODAY: JionToken[] = [
     status: 'active',
   },
   {
-    symbol: 'mMSFT-20260518',
+    symbol: 'mMSFT',
     ticker: 'MSFT',
     name: 'Microsoft Corp',
     market: 'NASDAQ',
@@ -46,7 +46,7 @@ export const MOCK_TOKENS_TODAY: JionToken[] = [
     status: 'active',
   },
   {
-    symbol: 'mAMD-20260518',
+    symbol: 'mAMD',
     ticker: 'AMD',
     name: 'Advanced Micro Devices',
     market: 'NASDAQ',
@@ -59,7 +59,7 @@ export const MOCK_TOKENS_TODAY: JionToken[] = [
 ];
 
 export const MOCK_TOKEN_SETTLED_EXAMPLE: JionToken = {
-  symbol: 'mSNAP-20260517',
+  symbol: 'mSNAP',
   ticker: 'SNAP',
   name: 'Snap Inc',
   market: 'NASDAQ',
