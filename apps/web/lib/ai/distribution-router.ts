@@ -50,20 +50,29 @@ export async function routeDistribution({
 
 /**
  * Resolve a token symbol back to its source SnapshotEntry + market.
- * Used by the API route to handle requests like /api/distribution/mNVDA-20260520.
+ * Used by the route page + API route to handle requests like /route/mNVDA.
+ *
+ * Uses live Pyth-enriched snapshots so `entry.price` is the fresh oracle
+ * price. Falls back to mock prices for tickers without a Pyth feed or when
+ * Hermes is unreachable.
  */
-export function findEntryBySymbol(symbol: string): {
+export async function findEntryBySymbol(symbol: string): Promise<{
   entry: SnapshotEntry;
   market: MarketCode;
   issuedAt: string;
-} | null {
+} | null> {
   // Symbol format: mTICKER (2026-05-21 naming change — no date suffix)
   const match = symbol.match(/^m(.+)$/);
   if (!match) return null;
   const ticker = match[1];
   if (!ticker) return null;
 
-  for (const snapshot of MOCK_SNAPSHOTS_TODAY) {
+  // Lazy import to keep this module tree-shakable from non-web callers.
+  const { getLiveSnapshots } = await import("../snapshot-live");
+  const { snapshots } = await getLiveSnapshots();
+  const pool = snapshots.length > 0 ? snapshots : MOCK_SNAPSHOTS_TODAY;
+
+  for (const snapshot of pool) {
     const entry = snapshot.entries.find((e) => e.ticker === ticker);
     if (entry) {
       return { entry, market: snapshot.market, issuedAt: snapshot.capturedAt };

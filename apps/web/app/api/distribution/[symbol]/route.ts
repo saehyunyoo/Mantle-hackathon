@@ -11,7 +11,7 @@ export async function GET(
   const { symbol } = await params;
   const decoded = decodeURIComponent(symbol);
 
-  const resolved = findEntryBySymbol(decoded);
+  const resolved = await findEntryBySymbol(decoded);
   if (!resolved) {
     return NextResponse.json(
       { error: `Unknown token symbol: ${decoded}` },

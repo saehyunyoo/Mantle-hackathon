@@ -1,15 +1,23 @@
-import {
-  MOCK_DISTRIBUTIONS_TODAY,
-  MOCK_MARKETS,
-  MOCK_SNAPSHOTS_TODAY,
-} from "@jion/mocks";
+import { MOCK_DISTRIBUTIONS_TODAY, MOCK_MARKETS } from "@jion/mocks";
 import { HowItWorks } from "@/components/how-it-works";
+import { LiveStatusBar } from "@/components/live-status-bar";
 import { MarketTabs } from "@/components/market-tabs";
+import { getLiveSnapshots } from "@/lib/snapshot-live";
 
-export default function Home() {
+/**
+ * Revalidate the live snapshot once a minute. Server renders with a fresh
+ * Pyth fetch when the cache window expires; otherwise serves the cached
+ * page. Demo recordings stay consistent within a minute.
+ */
+export const revalidate = 60;
+
+export default async function Home() {
   const marketNames = Object.fromEntries(
     MOCK_MARKETS.map((m) => [m.code, m.name]),
   );
+
+  const { snapshots, coverage, pythUpdatedAt, pythStatus } =
+    await getLiveSnapshots();
 
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-12 sm:px-8 lg:px-12">
@@ -27,10 +35,16 @@ export default function Home() {
         </p>
       </header>
 
+      <LiveStatusBar
+        pythStatus={pythStatus}
+        pythUpdatedAt={pythUpdatedAt}
+        coverage={coverage}
+      />
+
       <HowItWorks />
 
       <MarketTabs
-        snapshots={MOCK_SNAPSHOTS_TODAY}
+        snapshots={snapshots}
         marketNames={marketNames}
         distributions={MOCK_DISTRIBUTIONS_TODAY}
       />
@@ -45,9 +59,11 @@ export default function Home() {
             className="text-violet-400 hover:underline"
           >
             Pyth Network
-          </a>
-          . Mock data shown for T1. Jion issues the tokens; trading happens on
-          Mantle DeFi venues (Merchant Moe, Fluxion, Agni, Lendle, Init Capital).
+          </a>{" "}
+          (live for {Object.values(coverage).reduce((a, c) => a + c.live, 0)} of
+          {" "}{Object.values(coverage).reduce((a, c) => a + c.total, 0)} tickers).
+          Tickers without a registered Pyth equity feed fall back to last
+          known mock prices. Trading happens on Mantle DeFi venues, not here.
         </p>
       </footer>
     </main>
