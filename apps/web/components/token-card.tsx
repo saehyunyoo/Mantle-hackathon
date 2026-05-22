@@ -60,7 +60,7 @@ export function TokenCard({
 }: TokenCardProps) {
   const currency = marketCurrency(market);
   const issueDate = new Date(issuedAt);
-  const symbol = `m${entry.ticker}-${issuedAt.slice(0, 10).replaceAll("-", "")}`;
+  const symbol = `m${entry.ticker}`;
   const displayPrice = livePrice ?? entry.price;
   const displayPriceUsd = toUsd(displayPrice, currency);
   const delta = displayPrice - entry.price;

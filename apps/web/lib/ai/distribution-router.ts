@@ -57,15 +57,13 @@ export function findEntryBySymbol(symbol: string): {
   market: MarketCode;
   issuedAt: string;
 } | null {
-  // Symbol format: mTICKER-YYYYMMDD
-  const match = symbol.match(/^m(.+)-(\d{8})$/);
+  // Symbol format: mTICKER (2026-05-21 naming change — no date suffix)
+  const match = symbol.match(/^m(.+)$/);
   if (!match) return null;
-  const [, ticker, dateDigits] = match;
-  if (!ticker || !dateDigits) return null;
+  const ticker = match[1];
+  if (!ticker) return null;
 
   for (const snapshot of MOCK_SNAPSHOTS_TODAY) {
-    const snapshotDate = snapshot.capturedAt.slice(0, 10).replaceAll("-", "");
-    if (snapshotDate !== dateDigits) continue;
     const entry = snapshot.entries.find((e) => e.ticker === ticker);
     if (entry) {
       return { entry, market: snapshot.market, issuedAt: snapshot.capturedAt };
@@ -74,8 +72,9 @@ export function findEntryBySymbol(symbol: string): {
   return null;
 }
 
-function buildSymbol(ticker: string, issuedAt: string): string {
-  return `m${ticker}-${issuedAt.slice(0, 10).replaceAll("-", "")}`;
+function buildSymbol(ticker: string, _issuedAt: string): string {
+  // Naming: mTICKER (single token per ticker — no re-issuance with date)
+  return `m${ticker}`;
 }
 
 function synthesizeTokenAddress(entry: SnapshotEntry): string {

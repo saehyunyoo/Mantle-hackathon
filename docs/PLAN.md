@@ -8,6 +8,23 @@
 
 ## 📌 Revision History
 
+> ### 🏷️ 2026-05-21 — **토큰 명명 규칙 변경 (재발행 X)**
+>
+> **이전:** 매일 top10 → `mTICKER-YYYYMMDD` 형식으로 매일 새 ERC-20 발행. 같은 ticker라도 발행일 다르면 별개 토큰.
+>
+> **이후:** **Ticker 1개당 토큰 1개** 유지. 토큰 명명 `mTICKER` (날짜 없음).
+> - 매일 top10 측정 → **새로 진입한 ticker만** 발행. 기존 ticker가 top10에 있으면 유지 (재발행 X)
+> - **이탈한 ticker** → 24h grace period 후 24h 거래량 < $10K이면 정산
+> - 유동성이 한 풀에 집중. 유저 경험 자연스러움 (어제 산 토큰 = 오늘 산 토큰)
+>
+> **영향 섹션:**
+> - §4.1 발행 (재발행 로직 추가)
+> - §4.4 생명주기 (top10 이탈 + grace + 거래량 미달 조합)
+> - 부록 A: `TokenFactory.sol` (skip-if-exists 로직 필요 — 세현 영향)
+> - 부록 B: `issue-tokens` 잡 (delta 계산 — 새 진입만 발행)
+>
+> **세현(@saehyunyoo) 주의:** `TokenFactory` 컨트랙트 + `issue-tokens` 잡이 매일 발행 가정이라면 변경 필요. 자세한 건 이슈 #5 코멘트.
+
 > ### 🧩 2026-05-20 저녁 — **인프라 컨셉 증명 (T7/T8 신설)**
 >
 > 영인 질문: \"하이브리드면 우리가 인프라/어댑터이고 외부 DeFi가 호환해서 쓸 수 있다는 걸 어떻게 보여줘?\" → 다음 추가:
@@ -89,11 +106,12 @@
 
 ## 4. 토큰 메커니즘 🔄 *2026-05-20 피봇*
 
-### 4.1 발행 (Issuance)
+### 4.1 발행 (Issuance) 🏷️ *2026-05-21 명명 규칙 변경*
 
 - **트리거:** 각 시장 개장 +1시간 자동 (KRX 10:00 KST / NASDAQ 10:30 ET / TSE 10:00 JST 등)
 - **선정 기준:** 직전 1시간 거래량 Top 10
-- **토큰 표준:** ERC-20 (`mTICKER-YYYYMMDD` 형식 → 예: `mTSLA-20260601`)
+- **토큰 표준:** ERC-20 — **`mTICKER`** (예: `mNVDA`, `m005930`, `m7203`). **Ticker 1개당 토큰 1개** 유지
+- **재발행 정책:** 매일 top10 측정 → **새로 진입한 ticker만** 발행. 기존 ticker가 top10에 있으면 기존 토큰 유지 (재발행 X — 유동성 분산 방지)
 - **발행가:** 오라클(Pyth Network) 시세 = 1 토큰 가격
 - **유통:** Jion은 직접 AMM 운영 안 함. 발행 직후 AI 라우팅 결과대로 **외부 DeFi 프로토콜에 자동 분배** (4.2 참고)
 
@@ -116,17 +134,25 @@
 - **API/구독:** DeFi 앱이 새 토큰을 자동 가져갈 수 있게 webhook + REST API (예: `GET /api/today` → 오늘 발행 토큰 + 분배 정보)
 - **신규 DeFi 추가:** 새 프로토콜이 등록되면 다음 발행 사이클부터 라우팅 후보에 포함
 
-### 4.4 생명주기 (Lifecycle) — 동적 폐기
+### 4.4 생명주기 (Lifecycle) — 동적 폐기 🏷️ *2026-05-21 갱신*
 
-매일 다음 발행 시점(개장 +1시간)에 직전 24h **통합 거래량**(모든 분배된 DeFi 풀 합산) 측정:
+매일 발행 시점(개장 +1시간)에 모든 활성 토큰을 두 가지 기준으로 평가:
 
-- **≥ $10,000:** 24시간 유예 연장 (영구 존속 가능)
-- **< $10,000:** **강제 정산**
-  - 정산 시점 오라클 가격으로 토큰 보유자에게 **USDC 환산 분배**
-  - 분배된 모든 DeFi에서 일괄 회수 (LP 회수 / collateral 청산 / lending 시장 종결)
-  - 컨트랙트는 종결 상태로 이동
+1. **Top 10 진입 여부** — 오늘 top10에 여전히 있는지
+2. **24h 통합 거래량** — 모든 분배된 DeFi 풀 합산
 
-**근거:** $10K = DexScreener 풀 노출 최소 유동성 기준선, "활성/비활성" 분기점.
+| 시나리오 | 조치 |
+|---|---|
+| Top 10 안에 있음 | 유지 (재발행 없음) |
+| Top 10 이탈 + 24h 거래량 ≥ $10K | **24h grace** (한 번 더 기회) |
+| Top 10 이탈 + 24h 거래량 < $10K | **강제 정산** |
+
+**강제 정산 동작:**
+- 정산 시점 오라클 가격으로 토큰 보유자에게 **USDC 환산 분배**
+- 분배된 모든 DeFi에서 일괄 회수 (LP 회수 / collateral 청산 / lending 시장 종결)
+- 컨트랙트는 종결 상태로 이동
+
+**근거:** $10K = DexScreener 풀 노출 최소 유동성 기준선. 한 번 인기 잃은 종목도 grace 한 번은 줌 (단순 변동 보호).
 
 ### 4.5 수익 모델
 
@@ -346,8 +372,8 @@ MVP (D) → 성숙 단계 (C):
 
 ```
 contracts/
-├─ JionToken.sol             // ERC-20 합성토큰 (mTICKER-YYYYMMDD)
-├─ TokenFactory.sol          // 일별 배치 발행 진입점
+├─ JionToken.sol             // ERC-20 합성토큰 (mTICKER — 2026-05-21 명명 변경)
+├─ TokenFactory.sol          // 일별 배치 발행 (skip-if-exists, 새 ticker만 발행)
 ├─ OracleAdapter.sol         // Pyth 시세 어댑터
 ├─ JionPool.sol              // Uniswap V2 fork AMM (Phase 1 MVP 활성)
 ├─ JionRouter.sol            // 자체 풀 거래 진입점
@@ -373,7 +399,7 @@ contracts/
 | 잡 | 트리거 | 동작 |
 |---|---|---|
 | `snapshot-market` | 각 시장 개장 +1시간 (cron) | Polygon.io에서 Top 10 가져옴 → DB 저장 |
-| `issue-tokens` | 스냅샷 직후 | TokenFactory 호출 → 10개 토큰 발행 |
+| `issue-tokens` | 스냅샷 직후 | **새 진입 ticker만** TokenFactory 호출 (기존 활성 토큰과 비교 후 delta만 발행) |
 | `compute-distribution` | issue-tokens 직후 | 각 토큰의 분배 라우팅 결정 (휴리스틱+LLM) → `TokenDistribution` 산출 |
 | `execute-distribution` | compute-distribution 직후 | Distributor 호출 → 각 어댑터로 외부 DeFi 풀/담보 등록 |
 | `daily-volume-check` | 매일 개장 +1시간 | 분배된 모든 풀의 24h 통합 거래량 측정 → 임계치 비교 |
