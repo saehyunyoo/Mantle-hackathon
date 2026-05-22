@@ -28,12 +28,62 @@ const ISSUE_DATE_FORMAT: Intl.DateTimeFormatOptions = {
   year: "numeric",
 };
 
-const TOTAL_CANDIDATE_PROTOCOLS = 5;
+function primaryTradeVenue(distribution?: TokenDistribution): DeFiListing | null {
+  if (!distribution) return null;
+  const amm = distribution.listings.find((l) => l.kind === "amm-pool");
+  return amm ?? distribution.listings[0] ?? null;
+}
 
-function shortReasoning(text: string, maxChars = 120): string {
-  const firstSentence = text.split(/(?<=[.!?])\s/)[0] ?? text;
-  if (firstSentence.length <= maxChars) return firstSentence;
-  return firstSentence.slice(0, maxChars).trimEnd() + "…";
+function BuySellTabs({
+  distribution,
+  symbol,
+}: {
+  distribution?: TokenDistribution;
+  symbol: string;
+}) {
+  const venue = primaryTradeVenue(distribution);
+  if (!venue) {
+    return (
+      <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-center text-[11px] text-zinc-600">
+        Trading opens once routing lands
+      </div>
+    );
+  }
+
+  const venueLabel = PROTOCOL_LABEL[venue.protocol] ?? venue.protocol;
+  const buyHref = `${venue.url}${venue.url.includes("?") ? "&" : "?"}side=buy&token=${encodeURIComponent(symbol)}`;
+  const sellHref = `${venue.url}${venue.url.includes("?") ? "&" : "?"}side=sell&token=${encodeURIComponent(symbol)}`;
+
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-2">
+        <a
+          href={buyHref}
+          target="_blank"
+          rel="noreferrer"
+          className="group/btn inline-flex items-center justify-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-300 transition hover:border-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-200"
+          title={`Buy ${symbol} on ${venueLabel}`}
+        >
+          Buy
+          <span className="text-[10px] opacity-70 group-hover/btn:opacity-100">↗</span>
+        </a>
+        <a
+          href={sellHref}
+          target="_blank"
+          rel="noreferrer"
+          className="group/btn inline-flex items-center justify-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm font-semibold text-rose-300 transition hover:border-rose-400 hover:bg-rose-500/20 hover:text-rose-200"
+          title={`Sell ${symbol} on ${venueLabel}`}
+        >
+          Sell
+          <span className="text-[10px] opacity-70 group-hover/btn:opacity-100">↗</span>
+        </a>
+      </div>
+      <div className="mt-1.5 text-center text-[10px] text-zinc-500">
+        Trade on{" "}
+        <span className="font-medium text-zinc-300">{venueLabel}</span>
+      </div>
+    </div>
+  );
 }
 
 function ListingPill({ listing }: { listing: DeFiListing }) {
@@ -128,37 +178,36 @@ export function TokenCard({
         </div>
       </div>
 
+      <div className="mb-4">
+        <div className="mb-3 flex items-baseline gap-2">
+          <span className="text-sm font-medium text-zinc-200">{entry.ticker}</span>
+          <span className="text-xs text-zinc-500">· {market}</span>
+          <span className="ml-auto font-mono text-[10px] text-zinc-600">
+            {symbol}
+          </span>
+        </div>
+        <BuySellTabs distribution={distribution} symbol={symbol} />
+      </div>
+
       {distribution ? (
-        <div className="mb-4 rounded-xl border border-violet-500/30 bg-violet-500/[0.04] p-3">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-violet-300">
-              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-violet-500/20 text-[9px]">
-                AI
-              </span>
-              AI Routed
+        <div className="mt-auto rounded-xl border border-violet-500/30 bg-violet-500/[0.04] p-3">
+          <Link
+            href={`/route/${encodeURIComponent(distribution.tokenSymbol)}`}
+            className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-violet-300 hover:text-violet-200"
+          >
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-500/20 px-1 text-[11px] font-bold leading-none text-violet-200">
+              AI
             </span>
-            <span className="font-mono text-[10px] text-zinc-500">
-              Picked {distribution.listings.length} of{" "}
-              {TOTAL_CANDIDATE_PROTOCOLS} candidates
-            </span>
-          </div>
-          <p className="mb-3 text-[11px] leading-relaxed text-zinc-300">
-            &ldquo;{shortReasoning(distribution.routingReasoning)}&rdquo;
-          </p>
-          <div className="mb-3 flex flex-wrap gap-1.5">
+            Why this route →
+          </Link>
+          <div className="flex flex-wrap gap-1.5">
             {distribution.listings.map((l) => (
               <ListingPill key={`${l.protocol}-${l.listingAddress}`} listing={l} />
             ))}
           </div>
-          <Link
-            href={`/route/${encodeURIComponent(distribution.tokenSymbol)}`}
-            className="inline-flex items-center text-[10px] font-medium uppercase tracking-wider text-violet-300 hover:text-violet-200"
-          >
-            View routing →
-          </Link>
         </div>
       ) : (
-        <div className="mb-4 rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
+        <div className="mt-auto rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
           <div className="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">
             Routing soon
           </div>
@@ -167,14 +216,6 @@ export function TokenCard({
           </div>
         </div>
       )}
-
-      <div className="mt-auto border-t border-zinc-800 pt-4">
-        <div className="mb-1 flex items-baseline gap-2">
-          <span className="text-sm font-medium text-zinc-200">{entry.ticker}</span>
-          <span className="text-xs text-zinc-500">· {market}</span>
-        </div>
-        <div className="font-mono text-[10px] text-zinc-600">Token {symbol}</div>
-      </div>
     </div>
   );
 }

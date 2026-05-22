@@ -6,19 +6,19 @@ interface Pillar {
 
 const PILLARS: Pillar[] = [
   {
-    icon: "🧠",
-    title: "Heuristic decision",
-    body: "Rule-based scoring across 5 Mantle DeFi venues — volume tier × volatility × venue fit. Deterministic, auditable, no model hallucination.",
+    icon: "📈",
+    title: "Top-10 volume stocks",
+    body: "The day's most-traded stocks from NASDAQ, KRX, and TSE — auto-tokenized one hour after market open. Hold a single mTICKER to ride that day's market leaders.",
   },
   {
     icon: "✨",
     title: "LLM narrative",
-    body: "A reasoning LLM explains *why* each venue was picked in plain language. Never decides — only narrates the heuristic's choice.",
+    body: "A reasoning LLM explains *why* each token went to which venue, in plain language. Click any card to see the routing logic — no black box.",
   },
   {
     icon: "⛓️",
     title: "On-chain logged",
-    body: "Every routing decision is emitted via AgentLogger on Mantle Sepolia. Verifiable agent — replay any decision from the chain.",
+    body: "Every routing decision is emitted via AgentLogger on Mantle. Verifiable agent — replay any decision straight from chain history.",
   },
 ];
 
@@ -28,11 +28,10 @@ export function HowItWorks() {
       <div className="mb-4 flex items-baseline justify-between gap-3">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-violet-300">
-            How Jion routes
+            How Jion works
           </div>
-          <div className="mt-1 text-sm text-zinc-300">
-            Explainable AI distribution — verifiable rules + LLM narrative.
-            No hallucinated venue picks.
+          <div className="mt-1 text-xl font-semibold leading-tight text-zinc-50 sm:text-2xl">
+            Today&apos;s hottest stocks, AI-routed where they perform best.
           </div>
         </div>
       </div>
