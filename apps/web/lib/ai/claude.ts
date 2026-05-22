@@ -63,7 +63,8 @@ Reasoning:`;
     return block && "text" in block
       ? block.text.trim()
       : fallbackExplanation(entry, marketCode, listings);
-  } catch {
+  } catch (err) {
+    console.error("[claude] explainDistribution failed:", err);
     return fallbackExplanation(entry, marketCode, listings);
   }
 }

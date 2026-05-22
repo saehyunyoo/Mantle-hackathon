@@ -13,7 +13,7 @@ const PILLARS: Pillar[] = [
   {
     icon: "✨",
     title: "LLM narrative",
-    body: "Claude explains *why* each venue was picked in plain language. Never decides — only narrates the heuristic's choice.",
+    body: "A reasoning LLM explains *why* each venue was picked in plain language. Never decides — only narrates the heuristic's choice.",
   },
   {
     icon: "⛓️",

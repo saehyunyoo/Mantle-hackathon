@@ -62,11 +62,11 @@ export default async function RoutePage({ params }: RoutePageProps) {
             }`}
             title={
               claudeOn
-                ? "Live Claude inference + heuristic"
-                : "Heuristic-only (set ANTHROPIC_API_KEY for live Claude reasoning)"
+                ? "Live LLM-generated narration over heuristic routing"
+                : "Heuristic-only narration (LLM provider not configured)"
             }
           >
-            {claudeOn ? "Claude · live" : "Heuristic"}
+            {claudeOn ? "Reasoning AI · live" : "Heuristic"}
           </span>
         </div>
         <h1 className="text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
@@ -174,8 +174,8 @@ export default async function RoutePage({ params }: RoutePageProps) {
         <span className="font-mono">lib/ai/distribution-router</span>:
         heuristic scoring (volume × volatility × venue fit) +{" "}
         {claudeOn
-          ? "Claude reasoning."
-          : "fallback narrative (set ANTHROPIC_API_KEY for Claude live)."}{" "}
+          ? "live LLM-generated reasoning."
+          : "fallback template narration (LLM provider not configured)."}{" "}
         External adapter listings point to Mock adapters on Sepolia (T8) — labeled
         as such for honesty.
       </footer>
