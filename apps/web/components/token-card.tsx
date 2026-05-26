@@ -144,7 +144,10 @@ export function TokenCard({
 
       <div className="mb-5">
         <div className="mb-1 font-mono text-xs text-zinc-500">#{entry.rank}</div>
-        <div className="text-xl font-semibold leading-tight text-zinc-100">
+        <div
+          className="line-clamp-2 min-h-[3rem] text-xl font-semibold leading-tight text-zinc-100"
+          title={entry.name}
+        >
           {entry.name}
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { MarketSnapshot, TokenDistribution } from "@jion/types";
+import { CountdownBanner } from "@/components/countdown-banner";
 import { TokenCard } from "@/components/token-card";
 import { useLivePrices } from "@/lib/use-live-prices";
 
@@ -87,6 +88,12 @@ export function MarketTabs({
           </button>
         ))}
       </div>
+
+      <CountdownBanner
+        market={active.market}
+        marketLabel={marketNames[active.market] ?? active.market}
+        marketFlag={MARKET_FLAG[active.market] ?? "🌐"}
+      />
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-xs text-zinc-500">
         <span className="flex items-center gap-2">
