@@ -33,6 +33,7 @@ export function OracleFeedTable({ feeds }: OracleFeedTableProps) {
           <thead className="bg-zinc-900/60 text-left text-[11px] uppercase tracking-wider text-zinc-500">
             <tr>
               <th className="px-4 py-3 font-medium">Symbol</th>
+              <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Ticker</th>
               <th className="px-4 py-3 font-medium">Source</th>
               <th className="px-4 py-3 font-medium">Feed ID</th>
@@ -69,7 +70,10 @@ export function OracleFeedTable({ feeds }: OracleFeedTableProps) {
                   <td className="px-4 py-3 font-mono text-zinc-100">
                     {feed.tokenSymbol}
                   </td>
-                  <td className="px-4 py-3 text-zinc-300">{feed.ticker}</td>
+                  <td className="px-4 py-3 text-zinc-200">{feed.name}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-zinc-500">
+                    {feed.ticker}
+                  </td>
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center gap-1 rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-300">
                       {feed.source.toUpperCase()}
