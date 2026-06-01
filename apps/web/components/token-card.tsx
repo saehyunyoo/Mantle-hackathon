@@ -144,7 +144,10 @@ export function TokenCard({
 
       <div className="mb-5">
         <div className="mb-1 font-mono text-xs text-zinc-500">#{entry.rank}</div>
-        <div className="text-xl font-semibold leading-tight text-zinc-100">
+        <div
+          className="line-clamp-2 min-h-[3rem] text-xl font-semibold leading-tight text-zinc-100"
+          title={entry.name}
+        >
           {entry.name}
         </div>
       </div>
@@ -200,7 +203,7 @@ export function TokenCard({
             </span>
             Why this route →
           </Link>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex min-h-[3.5rem] flex-wrap content-start gap-1.5">
             {distribution.listings.map((l) => (
               <ListingPill key={`${l.protocol}-${l.listingAddress}`} listing={l} />
             ))}
