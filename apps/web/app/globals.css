@@ -1,10 +1,127 @@
 @import "tailwindcss";
 
-@theme inline {
+/* ============================================================
+   Jion design system
+   - brand: violet/indigo = "AI intelligence" (signature accent)
+   - emerald (tw default) reserved for "live / positive" state
+   ============================================================ */
+@theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Brand scale */
+  --color-brand-50: #f4f3ff;
+  --color-brand-100: #ebe9fe;
+  --color-brand-200: #d9d6fe;
+  --color-brand-300: #bfb8fd;
+  --color-brand-400: #9b8afb;
+  --color-brand-500: #7c5cfc;
+  --color-brand-600: #6d3ef0;
+  --color-brand-700: #5b2bd6;
+  --color-brand-800: #4c25b0;
+  --color-brand-900: #40228c;
+  --color-brand-950: #28145e;
+
+  /* Motion tokens → generate animate-* utilities */
+  --animate-fade-up: fade-up 0.4s ease both;
+  --animate-fade-in: fade-in 0.3s ease both;
+  --animate-blink: blink 1s step-end infinite;
+  --animate-pulse-soft: pulse-soft 2.4s ease-in-out infinite;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
 }
 
 body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  /* subtle brand glow anchored top — gives the dark theme a brand identity */
+  background-image: radial-gradient(
+    60rem 32rem at 50% -8rem,
+    color-mix(in oklab, var(--color-brand-600) 14%, transparent),
+    transparent 70%
+  );
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* Accessibility + polish ----------------------------------- */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  /* Visible keyboard focus everywhere (was missing — a11y 15%) */
+  *:focus-visible {
+    outline: 2px solid var(--color-brand-400);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--color-brand-500) 38%, transparent);
+    color: #fff;
+  }
+}
+
+/* Loading shimmer for skeletons (Interaction & Flow 30%) */
+.skeleton {
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.02) 30%,
+    rgba(255, 255, 255, 0.07) 50%,
+    rgba(255, 255, 255, 0.02) 70%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+/* Thin branded scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-brand-800) transparent;
+}
+
+/* Respect reduced-motion (a11y 15%) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -6,11 +6,13 @@ import { RoutingReasoning } from "@/components/routing-reasoning";
 import { AlternativeComparison } from "@/components/alternative-comparison";
 import { formatUsd } from "@/lib/format";
 import { explorerAddress, shortAddress } from "@/lib/explorer";
+import { PROTOCOL_LABEL } from "@jion/mocks";
 import { isClaudeEnabled } from "@/lib/ai/claude";
 import {
   findEntryBySymbol,
   routeDistribution,
 } from "@/lib/ai/distribution-router";
+import { scoreProtocolsFor } from "@/lib/ai/scoring";
 
 /** Cache Pyth-enriched route page for 60s, matching the home page window. */
 export const revalidate = 60;
@@ -30,6 +32,14 @@ export default async function RoutePage({ params }: RoutePageProps) {
 
   const distribution = await routeDistribution(resolved);
   const claudeOn = isClaudeEnabled();
+
+  // Candidate venue scores — visualizes the heuristic the LLM narrates.
+  const venueScores = scoreProtocolsFor(resolved.entry)
+    .slice(0, 5)
+    .map((s) => ({
+      label: PROTOCOL_LABEL[s.profile.protocol] ?? s.profile.protocol,
+      score: s.score,
+    }));
 
   const totalTvl = distribution.listings.reduce((s, l) => s + l.tvlUsd, 0);
   const totalVolume = distribution.listings.reduce(
@@ -129,6 +139,8 @@ export default async function RoutePage({ params }: RoutePageProps) {
         <RoutingReasoning
           reasoning={distribution.routingReasoning}
           generatedAt={distribution.generatedAt}
+          scores={venueScores}
+          onchainHref={explorerAddress(MANTLE_SEPOLIA_ADDRESSES.AgentLogger)}
         />
       </div>
 
@@ -179,8 +191,8 @@ export default async function RoutePage({ params }: RoutePageProps) {
         {claudeOn
           ? "live LLM-generated reasoning."
           : "fallback template narration (LLM provider not configured)."}{" "}
-        External adapter listings point to Mock adapters on Sepolia (T8) — labeled
-        as such for honesty.
+        External adapter listings point to mock venue adapters on Mantle Sepolia,
+        clearly labeled as such.
       </footer>
     </main>
   );
