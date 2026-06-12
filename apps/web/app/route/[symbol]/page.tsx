@@ -7,7 +7,7 @@ import { AlternativeComparison } from "@/components/alternative-comparison";
 import { formatUsd } from "@/lib/format";
 import { explorerAddress, shortAddress } from "@/lib/explorer";
 import { PROTOCOL_LABEL } from "@jion/mocks";
-import { isClaudeEnabled } from "@/lib/ai/claude";
+import { isLLMEnabled, providerLabel } from "@/lib/ai/claude";
 import {
   findEntryBySymbol,
   routeDistribution,
@@ -31,7 +31,7 @@ export default async function RoutePage({ params }: RoutePageProps) {
   }
 
   const distribution = await routeDistribution(resolved);
-  const claudeOn = isClaudeEnabled();
+  const claudeOn = isLLMEnabled();
 
   // Candidate venue scores — visualizes the heuristic the LLM narrates.
   const venueScores = scoreProtocolsFor(resolved.entry)
@@ -79,7 +79,7 @@ export default async function RoutePage({ params }: RoutePageProps) {
                 : "Heuristic-only narration (LLM provider not configured)"
             }
           >
-            {claudeOn ? "Reasoning AI · live" : "Heuristic"}
+            {claudeOn ? `${providerLabel()} · live` : "Heuristic"}
           </span>
         </div>
         <h1 className="text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">

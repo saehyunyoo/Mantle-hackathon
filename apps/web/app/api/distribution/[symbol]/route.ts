@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findEntryBySymbol, routeDistribution } from "@/lib/ai/distribution-router";
-import { isClaudeEnabled } from "@/lib/ai/claude";
+import { isLLMEnabled, providerLabel } from "@/lib/ai/claude";
 
 export const runtime = "nodejs";
 
@@ -24,8 +24,10 @@ export async function GET(
   return NextResponse.json({
     distribution,
     meta: {
-      claudeEnabled: isClaudeEnabled(),
-      generatedBy: isClaudeEnabled() ? "claude+heuristic" : "heuristic-only",
+      llmEnabled: isLLMEnabled(),
+      generatedBy: isLLMEnabled()
+        ? `${providerLabel().toLowerCase()}+heuristic`
+        : "heuristic-only",
     },
   });
 }
