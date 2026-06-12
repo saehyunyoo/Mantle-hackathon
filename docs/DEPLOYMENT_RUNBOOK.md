@@ -77,11 +77,26 @@ bun 모노레포라 **대시보드 import** 가 가장 깔끔.
 
 ---
 
-## ⚠️ 데모 전 필수 — AgentLogger authorize
+## ⚠️ 데모 전 필수 — AgentLogger에 실제 결정 시드(emit)
 
-`AgentLogger.log` 는 whitelist 전용(`authorized[msg.sender]`). AI 에이전트/크론이 쓰는 지갑이
-`setAuthorized(wallet, true)` 돼 있지 않으면 `NotAuthorized` 로 리버트되어 **온체인 기록이 통째로
-막힘** → award 핵심 요건이 무너짐.
+**현재 코드는 `AgentLogger.log()` 를 자동 호출하지 않는다.** 컨트랙트는 배포돼 있고 UI가
+주소를 링크하지만, emit된 `AgentDecision` 이벤트가 0개 → "View agent log on-chain ↗" 링크가
+**빈 컨트랙트**로 연결됨. "검증 가능한 에이전트" 강점이 데모에서 증명 불가.
 
-- 배포자 지갑(`0x74Ce253E373A17584263ef55E05513AbfE55CaAe`)은 생성자에서 자동 authorize 됨.
-- 다른 지갑을 쓰면 owner 가 `AgentLogger.setAuthorized(그 지갑, true)` 한 번 호출해야 함.
+→ 데모 전에 **실제 라우팅 결정 몇 개를 온체인에 emit**한다:
+
+```bash
+cd contracts
+AGENT_LOGGER=0x77edbfacfc302f01aba5d25ece57c5dc69dcb2e5 \
+forge script script/EmitAgentDecisions.s.sol:EmitAgentDecisions \
+  --rpc-url $MANTLE_SEPOLIA_RPC --broadcast --private-key $DEPLOYER_PRIVATE_KEY
+```
+
+- [ ] 실행 후 Explorer 의 AgentLogger 주소 → **logs 탭에 AgentDecision 이벤트** 확인
+- [ ] UI "View agent log on-chain ↗" 링크가 실제 결정으로 연결되는지
+
+**setAuthorized 는 필요 없다** — 배포자 지갑(`0x74Ce…`)은 생성자에서 자동 authorize 됨. (별도
+에이전트 지갑을 쓸 때만 owner 가 `setAuthorized(wallet, true)` 1회 호출.)
+
+> 참고: 이 스크립트는 데모용 **시드**다. "매 결정마다 자동 기록"하는 풀 파이프라인(크론이
+> 서버 사이너로 `log()` 호출)은 제출 이후 스트레치. 데모/심사엔 시드로 충분.
