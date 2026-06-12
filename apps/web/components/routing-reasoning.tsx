@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 
 interface RoutingReasoningProps {
-  reasoning: string;
+  /** When set, reasoning is streamed from /api/reasoning/[symbol] (fast page). */
+  symbol?: string;
+  /** Fallback text when not streaming (or if the stream fails). */
+  reasoning?: string;
   generatedAt: string;
   /** Venue match scores (0–100) from the heuristic — visualizes the "why". */
   scores?: { label: string; score: number }[];
@@ -12,32 +15,70 @@ interface RoutingReasoningProps {
 }
 
 export function RoutingReasoning({
+  symbol,
   reasoning,
   generatedAt,
   scores,
   onchainHref,
 }: RoutingReasoningProps) {
-  // Typewriter reveal — makes the AI narration feel generated, not pasted.
-  const [shown, setShown] = useState(0);
+  const [text, setText] = useState(symbol ? "" : (reasoning ?? ""));
+  const [streaming, setStreaming] = useState(!!symbol);
   const [barsIn, setBarsIn] = useState(false);
-
-  useEffect(() => {
-    let n = 0;
-    const step = Math.max(1, Math.round(reasoning.length / 90));
-    const id = setInterval(() => {
-      n = Math.min(reasoning.length, n + step);
-      setShown(n);
-      if (n >= reasoning.length) clearInterval(id);
-    }, 18);
-    return () => clearInterval(id);
-  }, [reasoning]);
 
   useEffect(() => {
     const id = setTimeout(() => setBarsIn(true), 120);
     return () => clearTimeout(id);
   }, []);
 
-  const typing = shown < reasoning.length;
+  // Stream the narration client-side so the page never blocks on the LLM.
+  useEffect(() => {
+    if (!symbol) return;
+    const controller = new AbortController();
+    let cancelled = false;
+
+    const finishWithFallback = () => {
+      setStreaming(false);
+      if (reasoning) setText((t) => (t ? t : reasoning));
+    };
+
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/reasoning/${encodeURIComponent(symbol)}`,
+          { signal: controller.signal },
+        );
+        if (!res.ok || !res.body) {
+          if (!cancelled) finishWithFallback();
+          return;
+        }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let got = false;
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done || cancelled) break;
+          const chunk = decoder.decode(value, { stream: true });
+          if (chunk) {
+            got = true;
+            setText((t) => t + chunk);
+          }
+        }
+        if (!cancelled) {
+          if (!got) finishWithFallback();
+          else setStreaming(false);
+        }
+      } catch {
+        if (!cancelled) finishWithFallback();
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [symbol, reasoning]);
+
+  const showSkeleton = streaming && !text;
 
   return (
     <div className="rounded-2xl border border-brand-500/30 bg-brand-500/[0.05] p-5">
@@ -58,14 +99,22 @@ export function RoutingReasoning({
         </span>
       </div>
 
-      <p className="text-sm leading-relaxed text-zinc-200">
-        {reasoning.slice(0, shown)}
-        {typing && (
-          <span className="ml-0.5 inline-block animate-blink text-brand-300">
-            ▍
-          </span>
-        )}
-      </p>
+      {showSkeleton ? (
+        <div className="space-y-2" aria-label="Generating reasoning">
+          <div className="skeleton h-3 w-3/4 rounded" />
+          <div className="skeleton h-3 w-full rounded" />
+          <div className="skeleton h-3 w-2/3 rounded" />
+        </div>
+      ) : (
+        <p className="text-sm leading-relaxed text-zinc-200">
+          {text}
+          {streaming && (
+            <span className="ml-0.5 inline-block animate-blink text-brand-300">
+              ▍
+            </span>
+          )}
+        </p>
+      )}
 
       {/* venue match scores — the heuristic the LLM is narrating, made visible */}
       {scores && scores.length > 0 && (
