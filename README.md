@@ -76,7 +76,7 @@ Source of truth: [`packages/types/src/supply.ts`](packages/types/src/supply.ts).
 | --- | --- |
 | TokenFactory | [`0x2eb123aedc45b26a5a04247af3790c5df113e2ae`](https://explorer.sepolia.mantle.xyz/address/0x2eb123aedc45b26a5a04247af3790c5df113e2ae) |
 | Distributor | [`0x28656c984ac361fe1a31cd4e13c28d97dc838cf6`](https://explorer.sepolia.mantle.xyz/address/0x28656c984ac361fe1a31cd4e13c28d97dc838cf6) |
-| Settlement (v2) | [`0xe11527fe1939c8827cc09690fd62b03950dda3ef`](https://explorer.sepolia.mantle.xyz/address/0xe11527fe1939c8827cc09690fd62b03950dda3ef) |
+| Settlement (v3) | [`0xa0EEe3Cf77f50FdD1fd90121de548bF3a56E3ee3`](https://explorer.sepolia.mantle.xyz/address/0xa0EEe3Cf77f50FdD1fd90121de548bF3a56E3ee3) |
 | OracleAdapter | [`0xcd847aa6e047a4c9121ad1e868e847322aaed29b`](https://explorer.sepolia.mantle.xyz/address/0xcd847aa6e047a4c9121ad1e868e847322aaed29b) |
 | AgentLogger | [`0x77edbfacfc302f01aba5d25ece57c5dc69dcb2e5`](https://explorer.sepolia.mantle.xyz/address/0x77edbfacfc302f01aba5d25ece57c5dc69dcb2e5) |
 | SelfPoolAdapter (real) | [`0x6e9bcc3409efaf8b220d549125973cb0f180b7e2`](https://explorer.sepolia.mantle.xyz/address/0x6e9bcc3409efaf8b220d549125973cb0f180b7e2) |
