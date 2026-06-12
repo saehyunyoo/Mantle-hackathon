@@ -23,7 +23,7 @@ interface AskMeta {
 }
 
 const EXAMPLES = [
-  "오늘의 핫스톡 보여줘",
+  "Show me today's hot stocks",
   "Why did mNVDA route to Merchant Moe?",
   "I want to buy mTSLA",
 ];

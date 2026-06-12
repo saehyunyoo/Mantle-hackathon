@@ -30,9 +30,7 @@ interface AskMeta {
 }
 
 const BUY_RE = /\b(buy|purchase|invest|acquire|long|get me)\b/i;
-const BUY_KO = ["사", "매수", "구매", "살래", "사고"];
 const TREND_RE = /\b(hot|trend|trending|today|top|movers|popular)\b/i;
-const TREND_KO = ["핫", "오늘", "트렌딩", "인기", "뭐 사"];
 
 export async function POST(req: Request) {
   let query = "";
@@ -66,9 +64,8 @@ export async function POST(req: Request) {
     if (symbol) break;
   }
 
-  const isBuy = BUY_RE.test(lower) || BUY_KO.some((k) => query.includes(k));
-  const isTrending =
-    TREND_RE.test(lower) || TREND_KO.some((k) => query.includes(k));
+  const isBuy = BUY_RE.test(lower);
+  const isTrending = TREND_RE.test(lower);
 
   let intent: Intent;
   if (symbol) intent = isBuy ? "buy" : "explain";
