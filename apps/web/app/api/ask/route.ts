@@ -99,10 +99,10 @@ export async function POST(req: Request) {
       const venueList = meta.venues.map((v) => v.label).join(", ");
 
       if (intent === "buy") {
-        prompt = `You are Jion's AI routing agent. The user wants to acquire ${resolved.entry.name} (${symbol}). Jion is infrastructure, not a venue — it never executes trades itself. In 2-3 sentences: name the best Mantle DeFi venue(s) to trade it (${venueList}) and why, then tell the user to complete the trade on that external venue. Confident, concrete, no greeting.`;
+        prompt = `You are Jion's AI routing agent. The user wants to acquire ${resolved.entry.name} (${symbol}). Jion is infrastructure, not a venue. In ONE short sentence: name the best Mantle DeFi venue to trade it (${venueList}) and tell them to complete the trade there. No greeting, no preamble.`;
         fallback = `${resolved.entry.name} is best traded on ${venueList} on Mantle. Jion routes — it doesn't custody your trade — so open the venue below to complete your purchase.`;
       } else {
-        prompt = `You are Jion's AI routing agent. Explain in 2-3 concise sentences why ${resolved.entry.name} (${symbol}) was routed to these Mantle DeFi venues: ${venueList}. Reference volume rank, volatility, and liquidity fit. Confident, technical, no greeting.`;
+        prompt = `You are Jion's AI routing agent. In ONE short sentence, say why ${resolved.entry.name} (${symbol}) was routed to ${venueList} — reference volume rank, volatility, or liquidity. No greeting, no preamble.`;
         fallback = distribution.routingReasoning;
       }
     } else {
@@ -126,12 +126,12 @@ export async function POST(req: Request) {
     const list = top
       .map(({ e, market }) => `${e.name} (${e.ticker}, ${market} #${e.rank})`)
       .join("; ");
-    prompt = `You are Jion's AI agent. In 1-2 sentences, introduce today's auto-tokenized top-volume stocks across markets, then invite the user to tap one to see its AI routing. Today's names: ${list}. No greeting, confident.`;
+    prompt = `You are Jion's AI agent. In ONE short sentence, introduce today's auto-tokenized top-volume stocks and invite the user to tap one for its AI routing. Names: ${list}. No greeting, no preamble.`;
     fallback = `Today's auto-tokenized leaders: ${list}. Tap any to see how the AI distributed it across Mantle DeFi.`;
   }
 
   if (intent === "general") {
-    prompt = `You are Jion's assistant. Jion auto-tokenizes the day's top-volume stocks per market and an explainable AI router distributes them across Mantle DeFi venues; every routing decision is logged on-chain via AgentLogger. Answer the user's question in 2-3 sentences. If off-topic, steer back to what Jion does. No greeting.\n\nUser: ${query}`;
+    prompt = `You are Jion's assistant. Jion auto-tokenizes the day's top-volume stocks per market and an explainable AI router distributes them across Mantle DeFi venues; every routing decision is logged on-chain via AgentLogger. Answer the user's question in 1-2 short sentences. If off-topic, steer back to what Jion does. No greeting.\n\nUser: ${query}`;
     fallback =
       "Jion auto-tokenizes the day's top-volume stocks and an explainable AI router distributes them across Mantle DeFi — every decision logged on-chain. Try \"show today's hot stocks\" or \"why did mNVDA route to Merchant Moe?\".";
   }
@@ -143,7 +143,7 @@ export async function POST(req: Request) {
       try {
         if (isClaudeEnabled()) {
           let emitted = false;
-          for await (const chunk of streamText(prompt)) {
+          for await (const chunk of streamText(prompt, 110)) {
             emitted = true;
             controller.enqueue(encoder.encode(chunk));
           }
@@ -163,6 +163,8 @@ export async function POST(req: Request) {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "no-store",
+      // Disable proxy buffering so tokens flush to the client as they stream.
+      "X-Accel-Buffering": "no",
     },
   });
 }
