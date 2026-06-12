@@ -3,7 +3,7 @@ import { PROTOCOL_LABEL, MOCK_SNAPSHOTS_TODAY } from "@jion/mocks";
 import { getLiveSnapshots } from "@/lib/snapshot-live";
 import {
   findEntryBySymbol,
-  routeDistribution,
+  routeDistributionFast,
 } from "@/lib/ai/distribution-router";
 import { isClaudeEnabled, streamText } from "@/lib/ai/claude";
 
@@ -85,7 +85,9 @@ export async function POST(req: Request) {
   if (symbol) {
     const resolved = await findEntryBySymbol(symbol);
     if (resolved) {
-      const distribution = await routeDistribution(resolved);
+      // Fast: venues/listings only, no blocking LLM call — the narrative
+      // streams separately below so meta + chips appear instantly.
+      const distribution = routeDistributionFast(resolved);
       meta.name = resolved.entry.name;
       meta.tokenAddress = distribution.tokenAddress;
       meta.routeHref = `/route/${symbol}`;
