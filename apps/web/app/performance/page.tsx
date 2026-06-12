@@ -57,8 +57,8 @@ export default function PerformancePage() {
       </div>
 
       <footer className="border-t border-zinc-900 pt-6 text-xs text-zinc-600">
-        Aggregated from <span className="font-mono">MOCK_DISTRIBUTIONS_TODAY</span>{" "}
-        — follow-up PR will wire to T4 Supabase + on-chain reads from{" "}
+        Aggregated from <span className="font-mono">MOCK_DISTRIBUTIONS_TODAY</span>,
+        wiring to on-chain reads from{" "}
         <span className="font-mono">Distributor</span> + each adapter&apos;s
         <span className="font-mono"> volume24h()</span>.
       </footer>

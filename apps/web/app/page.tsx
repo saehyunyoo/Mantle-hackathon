@@ -1,4 +1,5 @@
 import { MOCK_DISTRIBUTIONS_TODAY, MOCK_MARKETS } from "@jion/mocks";
+import { AskJion } from "@/components/ask-jion";
 import { HowItWorks } from "@/components/how-it-works";
 import { LiveStatusBar } from "@/components/live-status-bar";
 import { MarketTabs } from "@/components/market-tabs";
@@ -34,6 +35,10 @@ export default async function Home() {
           and AI-routed across Mantle DeFi. Trade them where they live — not here.
         </p>
       </header>
+
+      <div className="mb-10">
+        <AskJion />
+      </div>
 
       <LiveStatusBar
         pythStatus={pythStatus}

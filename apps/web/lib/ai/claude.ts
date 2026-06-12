@@ -9,6 +9,31 @@ export function isClaudeEnabled(): boolean {
   return client !== null;
 }
 
+/**
+ * Stream a natural-language answer token-by-token. Yields nothing when no
+ * API key is configured — callers fall back to a templated narrative so the
+ * "Ask Jion" UI keeps working in dev / on the mock demo.
+ */
+export async function* streamText(
+  prompt: string,
+  maxTokens = 320,
+): AsyncGenerator<string> {
+  if (!client) return;
+  const stream = client.messages.stream({
+    model: "claude-sonnet-4-6",
+    max_tokens: maxTokens,
+    messages: [{ role: "user", content: prompt }],
+  });
+  for await (const event of stream) {
+    if (
+      event.type === "content_block_delta" &&
+      event.delta.type === "text_delta"
+    ) {
+      yield event.delta.text;
+    }
+  }
+}
+
 interface ReasoningInput {
   entry: SnapshotEntry;
   marketCode: string;
