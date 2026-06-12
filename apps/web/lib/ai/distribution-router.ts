@@ -49,6 +49,31 @@ export async function routeDistribution({
 }
 
 /**
+ * Same as {@link routeDistribution} but WITHOUT the LLM reasoning call —
+ * returns instantly (heuristic scoring + venue selection only). The route page
+ * uses this for a fast first paint and streams the reasoning client-side via
+ * /api/reasoning/[symbol]. `routingReasoning` is intentionally left empty.
+ */
+export function routeDistributionFast({
+  entry,
+  issuedAt,
+  pools,
+}: RouteOptions): TokenDistribution {
+  const tokenSymbol = buildSymbol(entry.ticker, issuedAt);
+  const tokenAddress = synthesizeTokenAddress(entry);
+  const scores = scoreProtocolsFor(entry, pools ?? MOCK_POOLS_TODAY);
+  const listings = selectListings(scores, entry, tokenSymbol);
+
+  return {
+    tokenSymbol,
+    tokenAddress,
+    listings,
+    routingReasoning: "",
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+/**
  * Resolve a token symbol back to its source SnapshotEntry + market.
  * Used by the route page + API route to handle requests like /route/mNVDA.
  *

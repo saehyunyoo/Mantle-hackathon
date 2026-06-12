@@ -10,7 +10,7 @@ import { PROTOCOL_LABEL } from "@jion/mocks";
 import { isLLMEnabled, providerLabel } from "@/lib/ai/claude";
 import {
   findEntryBySymbol,
-  routeDistribution,
+  routeDistributionFast,
 } from "@/lib/ai/distribution-router";
 import { scoreProtocolsFor } from "@/lib/ai/scoring";
 
@@ -30,7 +30,8 @@ export default async function RoutePage({ params }: RoutePageProps) {
     notFound();
   }
 
-  const distribution = await routeDistribution(resolved);
+  // Fast: no LLM call on the server — reasoning streams in client-side.
+  const distribution = routeDistributionFast(resolved);
   const claudeOn = isLLMEnabled();
 
   // Candidate venue scores — visualizes the heuristic the LLM narrates.
@@ -137,7 +138,7 @@ export default async function RoutePage({ params }: RoutePageProps) {
 
       <div className="mb-8">
         <RoutingReasoning
-          reasoning={distribution.routingReasoning}
+          symbol={decodedSymbol}
           generatedAt={distribution.generatedAt}
           scores={venueScores}
           onchainHref={explorerAddress(MANTLE_SEPOLIA_ADDRESSES.AgentLogger)}

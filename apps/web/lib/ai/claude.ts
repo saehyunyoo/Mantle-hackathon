@@ -189,15 +189,11 @@ interface ReasoningInput {
  * active provider. Falls back to a heuristic-built explanation if no provider
  * is configured or the call fails, so the UI always renders.
  */
-export async function explainDistribution({
+function buildDistributionPrompt({
   entry,
   marketCode,
   listings,
-}: ReasoningInput): Promise<string> {
-  if (!PROVIDER) {
-    return fallbackExplanation(entry, marketCode, listings);
-  }
-
+}: ReasoningInput): string {
   const venues = listings
     .map(
       (l) =>
@@ -205,7 +201,7 @@ export async function explainDistribution({
     )
     .join("\n");
 
-  const prompt = `You are the AI distribution router for Jion, a daily RWA tokenization platform on Mantle DeFi.
+  return `You are the AI distribution router for Jion, a daily RWA tokenization platform on Mantle DeFi.
 
 A new synthetic token was just issued. Explain in 1–2 concise sentences why it was routed to these specific Mantle DeFi venues. Speak as the routing agent — confident, technical, and concrete. Do not greet or hedge.
 
@@ -219,9 +215,41 @@ Selected venues:
 ${venues}
 
 Reasoning:`;
+}
 
-  const out = await complete(prompt, 220);
-  return out ?? fallbackExplanation(entry, marketCode, listings);
+export async function explainDistribution(input: ReasoningInput): Promise<string> {
+  if (!PROVIDER) {
+    return fallbackExplanation(input.entry, input.marketCode, input.listings);
+  }
+  const out = await complete(buildDistributionPrompt(input), 220);
+  return out ?? fallbackExplanation(input.entry, input.marketCode, input.listings);
+}
+
+/**
+ * Stream the distribution reasoning token-by-token. Used by the route page so
+ * the page renders instantly and the narration types in client-side instead of
+ * blocking the server render on a slow LLM call. Always yields *something*
+ * (live tokens, or the heuristic fallback) so the UI never sits empty.
+ */
+export async function* streamDistributionReasoning(
+  input: ReasoningInput,
+): AsyncGenerator<string> {
+  const fallback = () =>
+    fallbackExplanation(input.entry, input.marketCode, input.listings);
+  if (!PROVIDER) {
+    yield fallback();
+    return;
+  }
+  let emitted = false;
+  try {
+    for await (const chunk of streamText(buildDistributionPrompt(input), 220)) {
+      emitted = true;
+      yield chunk;
+    }
+  } catch (err) {
+    console.error("[llm] streamDistributionReasoning failed:", err);
+  }
+  if (!emitted) yield fallback();
 }
 
 function fallbackExplanation(
