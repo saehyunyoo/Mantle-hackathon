@@ -39,15 +39,15 @@ swap their tokens back for USDC at the oracle price — no force-burn, no dead b
 
 | Surface | URL |
 | --- | --- |
-| Trending (T1 home) | http://localhost:3000/ |
-| Reasoning dashboard | http://localhost:3000/reasoning |
-| Per-token deep dive (live Claude) | http://localhost:3000/route/mNVDA |
-| Performance matrix | http://localhost:3000/performance |
-| Oracle live feed | http://localhost:3000/feed |
-| Developer integration guide | http://localhost:3000/integrate |
-| Distribution API | http://localhost:3000/api/distribution/mNVDA |
+| Trending (T1 home) | https://mantle-hackathon-web.vercel.app/ |
+| Reasoning dashboard | https://mantle-hackathon-web.vercel.app/reasoning |
+| Per-token deep dive (live Z.ai) | https://mantle-hackathon-web.vercel.app/route/mNVDA |
+| Performance matrix | https://mantle-hackathon-web.vercel.app/performance |
+| Oracle live feed | https://mantle-hackathon-web.vercel.app/feed |
+| Developer integration guide | https://mantle-hackathon-web.vercel.app/integrate |
+| Distribution API | https://mantle-hackathon-web.vercel.app/api/distribution/mNVDA |
 
-Vercel deployment URL: _added after submission build_
+Vercel deployment URL: **https://mantle-hackathon-web.vercel.app/**
 
 ## How it works — 3 pillars
 
