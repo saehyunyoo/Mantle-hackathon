@@ -305,4 +305,125 @@ contract SettlementTest is Test {
         assertGt(got1, 0);
         assertGt(got2, 0);
     }
+
+    // -------------------------------------------------------------------
+    // Voluntary redemption (PLAN §4.4)
+    // -------------------------------------------------------------------
+
+    // Price in USDC raw units per WHOLE token. With our mock USDC at 18
+    // decimals in this test (MockERC20 default), match scale on both sides.
+    uint256 constant REDEEM_PRICE = 145 ether; // 145 USDC per 1 mNVDA
+
+    function _seedSettlementUsdc(uint256 amount) internal {
+        // Pre-fund Settlement so it can pay redemptions out of its own balance
+        // (matches production where the protocol vault seeds the contract).
+        vm.prank(owner);
+        usdc.mint(address(settlement), amount);
+    }
+
+    function test_SetOraclePriceOwnerOnly() public {
+        vm.prank(owner);
+        settlement.setOraclePrice(address(token), REDEEM_PRICE);
+        assertEq(
+            settlement.oraclePriceUsdcPerWholeToken(address(token)),
+            REDEEM_PRICE
+        );
+
+        vm.prank(holder1);
+        vm.expectRevert();
+        settlement.setOraclePrice(address(token), 1);
+    }
+
+    function test_RedeemHappyPath() public {
+        // Holder receives 10 tokens from the day's distribution mock-up.
+        token.mint(holder1, 10 ether);
+
+        vm.prank(owner);
+        settlement.setOraclePrice(address(token), REDEEM_PRICE);
+
+        // Solvency seed.
+        _seedSettlementUsdc(2_000 ether);
+
+        // Redeem 5 tokens → grossUsdc = 5 * 145 = 725, fee 0.5% = 3.625,
+        // net = 721.375
+        uint256 grossUsdc = (5 ether * REDEEM_PRICE) / 1 ether; // 725 ether
+        uint256 fee = (grossUsdc * 50) / 10_000;
+        uint256 expectedNet = grossUsdc - fee;
+
+        vm.startPrank(holder1);
+        token.approve(address(settlement), 5 ether);
+        uint256 got = settlement.redeem(address(token), 5 ether);
+        vm.stopPrank();
+
+        assertEq(got, expectedNet);
+        assertEq(usdc.balanceOf(holder1), expectedNet);
+        assertEq(usdc.balanceOf(feeVault), fee);
+        // Tokens are locked in Settlement (effective burn / retired supply).
+        assertEq(token.balanceOf(address(settlement)), 5 ether);
+        assertEq(token.balanceOf(holder1), 5 ether);
+        // Analytics
+        assertEq(settlement.totalRedeemed(address(token)), 5 ether);
+        assertEq(settlement.totalUsdcRedeemed(address(token)), expectedNet);
+    }
+
+    function test_RedeemRevertsZeroAmount() public {
+        vm.prank(owner);
+        settlement.setOraclePrice(address(token), REDEEM_PRICE);
+
+        vm.prank(holder1);
+        vm.expectRevert(Settlement.ZeroAmount.selector);
+        settlement.redeem(address(token), 0);
+    }
+
+    function test_RedeemRevertsNoOraclePrice() public {
+        token.mint(holder1, 5 ether);
+        _seedSettlementUsdc(1_000 ether);
+
+        vm.startPrank(holder1);
+        token.approve(address(settlement), 5 ether);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Settlement.NoOraclePrice.selector,
+                address(token)
+            )
+        );
+        settlement.redeem(address(token), 5 ether);
+        vm.stopPrank();
+    }
+
+    function test_RedeemRevertsInsufficientLiquidity() public {
+        token.mint(holder1, 10 ether);
+        vm.prank(owner);
+        settlement.setOraclePrice(address(token), REDEEM_PRICE);
+        // Intentionally do NOT seed Settlement USDC.
+
+        vm.startPrank(holder1);
+        token.approve(address(settlement), 5 ether);
+        vm.expectRevert(); // InsufficientLiquidity custom error
+        settlement.redeem(address(token), 5 ether);
+        vm.stopPrank();
+    }
+
+    function test_RedeemSetOraclePricesBatch() public {
+        MockERC20 token2 = new MockERC20("mTSLA", "mTSLA");
+
+        address[] memory tokens = new address[](2);
+        tokens[0] = address(token);
+        tokens[1] = address(token2);
+        uint256[] memory prices = new uint256[](2);
+        prices[0] = REDEEM_PRICE;
+        prices[1] = 230 ether;
+
+        vm.prank(owner);
+        settlement.setOraclePrices(tokens, prices);
+
+        assertEq(
+            settlement.oraclePriceUsdcPerWholeToken(address(token)),
+            REDEEM_PRICE
+        );
+        assertEq(
+            settlement.oraclePriceUsdcPerWholeToken(address(token2)),
+            230 ether
+        );
+    }
 }

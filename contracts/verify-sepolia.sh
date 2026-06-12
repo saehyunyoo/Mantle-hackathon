@@ -19,8 +19,8 @@
 #
 set -euo pipefail
 
-VERIFIER="blockscout"
-URL="https://explorer.sepolia.mantle.xyz/api"
+VERIFIER="etherscan"
+URL="https://api.etherscan.io/v2/api?chainid=5003"
 
 # --- 배포 시 사용된 constructor 인자 값 ---
 DEPLOYER=0x74Ce253E373A17584263ef55E05513AbfE55CaAe   # vm.addr(DEPLOYER_PRIVATE_KEY)
@@ -55,7 +55,7 @@ verify 0x6e9bcc3409efaf8b220d549125973cb0f180b7e2 src/adapters/SelfPoolAdapter.s
 verify 0xde7d132a2eeb0222fdfca58ea9e25ae78a47e9e4 src/adapters/mocks/MerchantMoeMockAdapter.sol:MerchantMoeMockAdapter "$A_OWNER"
 verify 0x7582ccc516ee587b3cc09541d8630ae4ebf8be9b src/adapters/mocks/LendleMockAdapter.sol:LendleMockAdapter "$A_OWNER"
 verify 0x9719d0f8e2b766b842d8c810a314ace9de9f6e28 src/MockUSDC.sol:MockUSDC                  "$A_OWNER"
-verify 0xe11527fe1939c8827cc09690fd62b03950dda3ef src/Settlement.sol:Settlement              "$A_SETTLE"
+verify 0xa0EEe3Cf77f50FdD1fd90121de548bF3a56E3ee3 src/Settlement.sol:Settlement              "$A_SETTLE"
 
 echo ""
 echo "✅ done — 각 컨트랙트 https://explorer.sepolia.mantle.xyz/address/<addr> 에서 green check 확인"

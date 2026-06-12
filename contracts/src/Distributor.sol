@@ -38,6 +38,10 @@ contract Distributor is Ownable, ReentrancyGuard {
     /// @notice token => list of adapters it's distributed to (for iteration).
     mapping(address => address[]) internal _venuesOf;
 
+    /// @notice Settlement contract that may call `unwindProportional`.
+    ///         Set once after deployment via `setSettlement`.
+    address public settlement;
+
     event AdapterAdded(address indexed adapter, string name);
     event AdapterRemoved(address indexed adapter);
     event TokenDistributed(
@@ -48,12 +52,21 @@ contract Distributor is Ownable, ReentrancyGuard {
         uint16 weightBps,
         bytes32 positionId
     );
+    event SettlementSet(address indexed settlement);
+    event ProportionalUnwind(
+        address indexed token,
+        uint16 fractionBps,
+        uint256 recoveredToken,
+        uint256 recoveredQuote
+    );
 
     error NotAdapter(address adapter);
     error WeightsExceedMax(uint256 sum);
     error LengthMismatch();
     error EmptyPlan();
     error TransferFailed();
+    error NotSettlement(address caller);
+    error InvalidFraction(uint16 fractionBps);
 
     constructor(address initialOwner_) Ownable(initialOwner_) {}
 
@@ -69,6 +82,13 @@ contract Distributor is Ownable, ReentrancyGuard {
     function removeAdapter(address adapter) external onlyOwner {
         isAdapter[adapter] = false;
         emit AdapterRemoved(adapter);
+    }
+
+    /// @notice Owner sets the Settlement contract authorized to call
+    ///         `unwindProportional`. Set once after Settlement deploy.
+    function setSettlement(address settlement_) external onlyOwner {
+        settlement = settlement_;
+        emit SettlementSet(settlement_);
     }
 
     // -----------------------------------------------------------------------
@@ -146,6 +166,61 @@ contract Distributor is Ownable, ReentrancyGuard {
 
     function venueCount(address token) external view returns (uint256) {
         return _venuesOf[token].length;
+    }
+
+    // -----------------------------------------------------------------------
+    // Redemption — Settlement-driven, best-effort unwind (PLAN §4.4)
+    // -----------------------------------------------------------------------
+
+    /**
+     * @notice Pull back a proportional slice from every adapter holding this token
+     *         and forward what's recovered to the caller (Settlement).
+     *
+     * @dev    Best-effort: an adapter that reverts on `withdraw()` (paused,
+     *         no position, internal error) is silently skipped — the rest still
+     *         contribute. The current minimal-viable Phase-1 implementation
+     *         performs FULL unwind of every adapter's position regardless of
+     *         `fractionBps` so the mock adapters can return their reserves;
+     *         a future revision will plumb partial-withdraw semantics through
+     *         the `IJionAdapter` interface (Phase 2+).
+     *
+     * @param  token        the JionToken being redeemed against
+     * @param  fractionBps  desired fraction (0–10000) of each position to pull
+     *                      back. Kept in storage / event log for analytics
+     *                      even though the v1 unwind is full.
+     * @return recoveredToken sum of token side returned by all adapters
+     * @return recoveredQuote sum of quote (USDC) side returned by all adapters,
+     *                        forwarded onward to the Settlement caller.
+     */
+    function unwindProportional(address token, uint16 fractionBps)
+        external
+        nonReentrant
+        returns (uint256 recoveredToken, uint256 recoveredQuote)
+    {
+        if (msg.sender != settlement) revert NotSettlement(msg.sender);
+        if (fractionBps == 0 || fractionBps > 10_000) {
+            revert InvalidFraction(fractionBps);
+        }
+
+        address[] memory venues = _venuesOf[token];
+        for (uint256 i = 0; i < venues.length; i++) {
+            bytes32 positionId = positionOf[token][venues[i]];
+            if (positionId == bytes32(0)) continue;
+            try IJionAdapter(venues[i]).withdraw(positionId) returns (
+                uint256 amountToken,
+                uint256 amountQuote
+            ) {
+                recoveredToken += amountToken;
+                recoveredQuote += amountQuote;
+                // Mark position consumed so a second redeem cycle doesn't
+                // double-withdraw against the same adapter slot.
+                positionOf[token][venues[i]] = bytes32(0);
+            } catch {
+                // best-effort: skip this venue
+            }
+        }
+
+        emit ProportionalUnwind(token, fractionBps, recoveredToken, recoveredQuote);
     }
 
     // -----------------------------------------------------------------------

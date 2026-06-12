@@ -61,6 +61,47 @@ contract Settlement is Ownable, ReentrancyGuard {
     ///         was already custodied by adapters). Used as denominator in claim.
     mapping(address => uint256) public circulatingAtSettle;
 
+    // -----------------------------------------------------------------------
+    // Voluntary redemption (PLAN §4.4 — replaces force-settle as the
+    // user-facing exit path; forceSettle/claim above retained for backward
+    // compatibility but no longer the recommended lifecycle).
+    // -----------------------------------------------------------------------
+
+    /// @notice Redemption fee in basis points (0.5%). Same magnitude as
+    ///         force-settle fee — kept here to make the two paths comparable.
+    uint16 public constant REDEEM_FEE_BPS = 50;
+
+    /// @notice Admin-set oracle price for each token, in USDC raw units per
+    ///         WHOLE token. e.g. NVDA at $145.30 with USDC 6-dec → 145_300_000.
+    ///         The off-chain cron mirrors Pyth Hermes into this mapping; the
+    ///         on-chain redeem path consumes whatever is set here.
+    mapping(address => uint256) public oraclePriceUsdcPerWholeToken;
+
+    /// @notice Cumulative tokens redeemed per JionToken (analytics).
+    mapping(address => uint256) public totalRedeemed;
+
+    /// @notice Cumulative USDC paid out per JionToken (net of fee, analytics).
+    mapping(address => uint256) public totalUsdcRedeemed;
+
+    event OraclePriceSet(address indexed token, uint256 priceUsdcPerWholeToken);
+
+    event Redeemed(
+        address indexed token,
+        address indexed holder,
+        uint256 tokenAmount,
+        uint256 oraclePriceUsdc,
+        uint256 grossUsdc,
+        uint256 fee,
+        uint256 netUsdcOut,
+        uint256 recoveredFromAdaptersToken,
+        uint256 recoveredFromAdaptersQuote,
+        uint256 timestamp
+    );
+
+    error ZeroAmount();
+    error NoOraclePrice(address token);
+    error InsufficientLiquidity(uint256 requested, uint256 available);
+
     event Settled(
         address indexed token,
         uint256 totalVolume24h,
@@ -99,6 +140,31 @@ contract Settlement is Ownable, ReentrancyGuard {
 
     function setFeeVault(address feeVault_) external onlyOwner {
         feeVault = feeVault_;
+    }
+
+    /// @notice Owner mirrors today's Pyth price into the contract so the
+    ///         `redeem` path can be a single user transaction (no Hermes
+    ///         payload inside the user's wallet). One write per token per
+    ///         price update (typically each market open).
+    function setOraclePrice(address token, uint256 priceUsdcPerWholeToken)
+        external
+        onlyOwner
+    {
+        oraclePriceUsdcPerWholeToken[token] = priceUsdcPerWholeToken;
+        emit OraclePriceSet(token, priceUsdcPerWholeToken);
+    }
+
+    /// @notice Convenience: set prices for many tokens in one transaction
+    ///         (e.g. cron after a top-10 snapshot).
+    function setOraclePrices(address[] calldata tokens, uint256[] calldata prices)
+        external
+        onlyOwner
+    {
+        require(tokens.length == prices.length, "length mismatch");
+        for (uint256 i = 0; i < tokens.length; i++) {
+            oraclePriceUsdcPerWholeToken[tokens[i]] = prices[i];
+            emit OraclePriceSet(tokens[i], prices[i]);
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -208,6 +274,94 @@ contract Settlement is Ownable, ReentrancyGuard {
         _safeTransferOut(usdc, msg.sender, usdcOut);
 
         emit Claimed(token, msg.sender, balance, usdcOut);
+    }
+
+    // -----------------------------------------------------------------------
+    // Voluntary redemption (PLAN §4.4)
+    // -----------------------------------------------------------------------
+
+    /**
+     * @notice Holder calls `redeem(token, amount)` to swap mTICKER for USDC
+     *         at the oracle price set by the owner. Always available — no
+     *         volume threshold, no grace period.
+     *
+     * Flow:
+     *   1. Holder approves Settlement for `amount` of the token.
+     *   2. Settlement pulls the token in (effective custody).
+     *   3. Settlement reads `oraclePriceUsdcPerWholeToken[token]`.
+     *   4. grossUsdc = (amount × price) / 1e18  (token 18-dec → USDC 6-dec)
+     *   5. fee = grossUsdc × REDEEM_FEE_BPS / 10000  → feeVault
+     *   6. Best-effort: Settlement asks Distributor to unwind the token's
+     *      adapter positions (`unwindProportional`). Recovered values are
+     *      stamped in the event for transparency but the payout to the holder
+     *      uses Settlement's own USDC balance — guarantees solvency even when
+     *      adapters are illiquid.
+     *   7. netUsdcOut → holder. Reverts if Settlement is underfunded.
+     *
+     * Notes:
+     *   - Tokens received by Settlement are NOT burned (no JionToken.burn
+     *     surface). They are effectively locked here — equivalent to retired
+     *     supply. A future TokenFactory could expose a Settlement-only burn.
+     */
+    function redeem(address token, uint256 amount)
+        external
+        nonReentrant
+        returns (uint256 usdcOut)
+    {
+        if (amount == 0) revert ZeroAmount();
+
+        uint256 price = oraclePriceUsdcPerWholeToken[token];
+        if (price == 0) revert NoOraclePrice(token);
+
+        // 1. Pull tokens from holder
+        _safeTransferFrom(token, msg.sender, address(this), amount);
+
+        // 2. Gross USDC at oracle price (token 18-dec, USDC 6-dec, price already
+        //    USDC raw units per whole token)
+        uint256 grossUsdc = (amount * price) / 1e18;
+
+        // 3. Fee
+        uint256 fee = (grossUsdc * uint256(REDEEM_FEE_BPS)) / 10_000;
+        usdcOut = grossUsdc - fee;
+
+        // 4. Best-effort adapter unwind (recovered amounts surface in event
+        //    only; actual payout comes from Settlement's USDC balance below).
+        uint256 recoveredToken;
+        uint256 recoveredQuote;
+        try distributor.unwindProportional(token, 10_000) returns (
+            uint256 t,
+            uint256 q
+        ) {
+            recoveredToken = t;
+            recoveredQuote = q;
+        } catch {
+            // ignore — Settlement must be solvent in its own right
+        }
+
+        // 5. Solvency check + payout
+        uint256 bal = IERC20(usdc).balanceOf(address(this));
+        if (bal < grossUsdc) {
+            revert InsufficientLiquidity(grossUsdc, bal);
+        }
+        if (fee > 0) _safeTransferOut(usdc, feeVault, fee);
+        _safeTransferOut(usdc, msg.sender, usdcOut);
+
+        // 6. Analytics
+        totalRedeemed[token] += amount;
+        totalUsdcRedeemed[token] += usdcOut;
+
+        emit Redeemed(
+            token,
+            msg.sender,
+            amount,
+            price,
+            grossUsdc,
+            fee,
+            usdcOut,
+            recoveredToken,
+            recoveredQuote,
+            block.timestamp
+        );
     }
 
     // -----------------------------------------------------------------------

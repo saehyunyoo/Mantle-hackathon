@@ -1,33 +1,8 @@
 // AUTO-GENERATED — do not edit.
-export const JionTokenAbi = [
+export const MockUSDCAbi = [
   {
     "type": "constructor",
     "inputs": [
-      {
-        "name": "name_",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "symbol_",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "underlying_",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "market_",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "pythFeedId_",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
       {
         "name": "initialOwner_",
         "type": "address",
@@ -35,6 +10,19 @@ export const JionTokenAbi = [
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "FAUCET_LIMIT",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -105,24 +93,6 @@ export const JionTokenAbi = [
   },
   {
     "type": "function",
-    "name": "burn",
-    "inputs": [
-      {
-        "name": "from",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "decimals",
     "inputs": [],
     "outputs": [
@@ -132,33 +102,20 @@ export const JionTokenAbi = [
         "internalType": "uint8"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "pure"
   },
   {
     "type": "function",
-    "name": "issuedAt",
-    "inputs": [],
-    "outputs": [
+    "name": "faucet",
+    "inputs": [
       {
-        "name": "",
+        "name": "amount",
         "type": "uint256",
         "internalType": "uint256"
       }
     ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "market",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "string",
-        "internalType": "string"
-      }
-    ],
-    "stateMutability": "view"
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -200,19 +157,6 @@ export const JionTokenAbi = [
         "name": "",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "pythFeedId",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
       }
     ],
     "stateMutability": "view"
@@ -317,19 +261,6 @@ export const JionTokenAbi = [
     "stateMutability": "nonpayable"
   },
   {
-    "type": "function",
-    "name": "underlying",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "string",
-        "internalType": "string"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
     "type": "event",
     "name": "Approval",
     "inputs": [
@@ -347,50 +278,6 @@ export const JionTokenAbi = [
       },
       {
         "name": "value",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "Burned",
-    "inputs": [
-      {
-        "name": "holder",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "Issued",
-    "inputs": [
-      {
-        "name": "factory",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "underlying",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
-      },
-      {
-        "name": "initialSupply",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -527,6 +414,11 @@ export const JionTokenAbi = [
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "FaucetLimitExceeded",
+    "inputs": []
   },
   {
     "type": "error",

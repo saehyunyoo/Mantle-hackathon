@@ -8,6 +8,7 @@ export { JionPoolAbi } from './JionPool.abi';
 export { JionRouterAbi } from './JionRouter.abi';
 export { DistributorAbi } from './Distributor.abi';
 export { SettlementAbi } from './Settlement.abi';
+export { MockUSDCAbi } from './MockUSDC.abi';
 export { SelfPoolAdapterAbi } from './SelfPoolAdapter.abi';
 export { MerchantMoeMockAdapterAbi } from './MerchantMoeMockAdapter.abi';
 export { LendleMockAdapterAbi } from './LendleMockAdapter.abi';
