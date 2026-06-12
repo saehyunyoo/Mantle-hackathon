@@ -31,12 +31,19 @@ export const MANTLE_SEPOLIA_ADDRESSES = {
   JionRouter: '0x08b3b7b4327c6bb464ef6c9ec84667731c0620d6',
   Distributor: '0x28656c984ac361fe1a31cd4e13c28d97dc838cf6',
   /**
-   * Settlement v2 — re-deployed 2026-05-21 with MockUSDC wired in
-   * (immutable `usdc` field forced the redeploy). Old v1 at
-   * 0x1df047a67952f7c81d78324e968b4381c5513a70 is left on-chain but
-   * no longer referenced anywhere.
+   * Settlement v3 — re-deployed 2026-06-12 with the voluntary-redemption
+   * model (PLAN §4.4: `redeem(token, amount)` + `setOraclePrice`).
+   *
+   * History:
+   *   - v1 at 0x1df047a67952f7c81d78324e968b4381c5513a70 — usdc=address(0),
+   *     non-functional, abandoned.
+   *   - v2 at 0xe11527fe1939c8827cc09690fd62b03950dda3ef — bytecode missing
+   *     on-chain (`cast code` returns 0x). Address recorded in PR #28 but
+   *     the deploy never actually landed.
+   *   - v3 (current) — confirmed on-chain via DeploySettlementV3.s.sol.
+   *     Ships the redeem flow alongside the legacy forceSettle/claim.
    */
-  Settlement: '0xe11527fe1939c8827cc09690fd62b03950dda3ef',
+  Settlement: '0xa0EEe3Cf77f50FdD1fd90121de548bF3a56E3ee3',
 
   // ---- Adapters ----
   SelfPoolAdapter: '0x6e9bcc3409efaf8b220d549125973cb0f180b7e2',

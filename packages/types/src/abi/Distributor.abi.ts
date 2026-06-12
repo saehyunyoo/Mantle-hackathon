@@ -1,4 +1,4 @@
-// AUTO-GENERATED — do not edit. Run `bun run export-abi` after forge build.
+// AUTO-GENERATED — do not edit.
 export const DistributorAbi = [
   {
     "type": "constructor",
@@ -140,6 +140,32 @@ export const DistributorAbi = [
   },
   {
     "type": "function",
+    "name": "setSettlement",
+    "inputs": [
+      {
+        "name": "settlement_",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "settlement",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "transferOwnership",
     "inputs": [
       {
@@ -149,6 +175,35 @@ export const DistributorAbi = [
       }
     ],
     "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "unwindProportional",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "fractionBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "recoveredToken",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "recoveredQuote",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
     "stateMutability": "nonpayable"
   },
   {
@@ -242,6 +297,50 @@ export const DistributorAbi = [
   },
   {
     "type": "event",
+    "name": "ProportionalUnwind",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "fractionBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "recoveredToken",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "recoveredQuote",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SettlementSet",
+    "inputs": [
+      {
+        "name": "settlement",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "TokenDistributed",
     "inputs": [
       {
@@ -290,6 +389,17 @@ export const DistributorAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidFraction",
+    "inputs": [
+      {
+        "name": "fractionBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "LengthMismatch",
     "inputs": []
   },
@@ -299,6 +409,17 @@ export const DistributorAbi = [
     "inputs": [
       {
         "name": "adapter",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "NotSettlement",
+    "inputs": [
+      {
+        "name": "caller",
         "type": "address",
         "internalType": "address"
       }

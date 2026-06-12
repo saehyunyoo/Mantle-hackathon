@@ -1,4 +1,4 @@
-// AUTO-GENERATED — do not edit. Run `bun run export-abi` after forge build.
+// AUTO-GENERATED — do not edit.
 export const JionPoolAbi = [
   {
     "type": "constructor",
