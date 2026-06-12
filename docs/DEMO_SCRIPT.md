@@ -1,145 +1,121 @@
-# Jion — 해커톤 데모 스크립트 & 촬영 가이드
+# Jion — Demo Script & Filming Guide (2-Minute, judging-optimized)
 
 > **출품:** Mantle Turing Test Hackathon 2026 · **AI × RWA 트랙**
-> **목표 길이:** 2분 30초 ~ 3분 (티저는 60초 버전 별도)
-> **상태 기준:** 2026-05-23 main (`bbc5435`) — Pyth 30/30 라이브, retail home, T7, supply policy
+> **길이:** 2:00 (20 Deployment Award "demo video ≥ 2min" 충족) · 60초 티저 별도
+> **VO 언어:** 영어 (UI 영어 + 국제 심사). 한국어 버전 필요하면 요청.
+> **녹음:** 화면녹화 + 보이스오버 분리. §5 풀 VO 그대로 읽으면 ≈2:00.
+> **서사 (외워둘 것):** "합성주식"이 아니라 — **"AI가 매일 트렌딩 주식을 자동 큐레이션 → 라우팅 → LP까지"** 하나의 자동화 파이프라인. (Innovation 방어)
+
+## 0. 한 줄 정의 (첫 12초에)
+> **"Today's trending stocks — auto-curated, AI-routed across Mantle DeFi, and logged on-chain."**
 
 ---
 
-## 0. 한 줄 정의 (외워서 첫 15초에)
+## 1. 🚨 촬영 전 필수 (하나라도 빠지면 데모 망함 — 녹화 시작 전 반드시 확인)
+- [ ] **① AgentLogger 시드 실행** (`EmitAgentDecisions.s.sol`, DEPLOYER 키) → explorer 로그탭에 `AgentDecision` 이벤트가 떠야 함. **안 하면 1:18 머니샷(View on-chain)이 빈 화면 → 최대 강점 죽음.**
+- [ ] **② public URL 로 녹화** (`*.vercel.app`). **localhost 녹화 절대 금지** (Product Completeness 감점 + Deployment Award 요건 위반)
+- [ ] **③ Z.ai 켜기** (`LLM_PROVIDER=zai` + `ZAI_API_KEY`) → route 배지 **"Z.ai · live"** 떠야 스폰서 가점. 안 되면 Claude로라도 라이브 (fallback 텍스트로 녹화 금지)
+- [ ] Pyth **"live 30/30"** 배지 확인 (Hermes 503이면 잘 나올 때 미리 녹화)
+- [ ] 모든 페이지 미리 1회 로드 (Next.js 첫 컴파일 지연 제거)
 
-> **"매일 가장 많이 거래된 주식을 자동 토큰화하고, AI가 Mantle DeFi 전역에 어디로 분배할지 결정하면서 그 이유를 설명한다 — 온체인으로 검증 가능하게."**
+> 위 ①②③ 안 된 상태로 녹화하면 심사위원이 클릭했을 때 빈 화면/localhost가 나와서 **오히려 감점**. 시간 없으면 이거부터.
 
 ---
 
-## 1. 핵심 강점 — 무엇을 내세울까
-
-대부분의 해커톤 프로젝트가 못 하는 것 위주로:
-
+## 2. 핵심 강점 (심사위원에게 각인시킬 것)
 | # | 강점 | 왜 강력한가 |
 |---|---|---|
-| 1 | **실 데이터로 작동** | Pyth 30/30 라이브 가격. 대부분 데모는 100% mock. NVDA, Toyota, Samsung 진짜 시세 |
-| 2 | **Explainable AI** | 블랙박스 아님. 모든 라우팅 결정을 자연어로 설명 (Claude / Z.ai) |
-| 3 | **Verifiable Agent (온체인)** | AgentLogger가 결정을 온체인 emit → explorer에서 재생 가능. **Allora 심사위원 정조준** |
-| 4 | **Mantle 생태계 친화** | 자체 거래소 아님 — 외부 DeFi에 토큰을 *먹여줌*. Adapter 패턴으로 누구나 1개 파일로 통합 |
-| 5 | **실배포 컨트랙트** | Sepolia에 9개 컨트랙트 deployed. mock UI 아니라 진짜 |
+| 0 | **유동성이 수요를 따라옴** | 매일 거래량 1등 종목만 다시 토큰화 → 가장 수요 큰 자산에 유동성 집중, stale 토큰 분산 X. "새 토큰 유동성 어디서?" 질문 선제 방어 |
+| 1 | **자연어 인터페이스 (Ask Jion)** | "Show me today's hot stocks" 처럼 말로 조작 → 응답 스트리밍. **UI/UX·AI Interaction 직격** |
+| 2 | **Explainable AI** | 블랙박스 아님 — 라우팅 이유를 실시간 자연어 + **점수 바**(volume×volatility×liquidity)로 시각화 |
+| 3 | **Verifiable Agent (온체인)** | `AgentLogger`가 결정을 온체인 emit → explorer에서 재생. Allora/Z.ai 심사 정조준 |
+| 4 | **실데이터 (Pyth 30/30 라이브)** | 대부분 데모 100% mock. NVDA·Toyota·Samsung 진짜 시세 |
+| 5 | **Infra-not-venue + Adapter 표준** | 자체 거래소 아님. 외부 DeFi가 `IJionAdapter` 1개로 통합. 생태계에 공급 |
 
----
-
-## 2. 트랙 매핑 (AI × RWA)
-
-트랙 공식 설명: *"Dynamic yield strategies and automated risk management ... built on Mantle's RWA infrastructure"*
-
+## 3. 트랙 매핑 (AI × RWA)
+트랙 공식: *"Dynamic yield strategies and automated risk management … on Mantle's RWA infrastructure"*
 | 트랙 키워드 | Jion 대응 (데모에서 짚을 것) |
 |---|---|
 | RWA | 주식 토큰화 (NVDA / Toyota / Samsung — 인지도 높은 실자산) |
-| Dynamic yield strategies | AI 분배 라우팅 — 토큰별 최적 venue 결정 |
-| Automated risk management | Voluntary redemption (홀더 영구 exit) + rank-tier supply |
-| Mantle RWA infrastructure | Pyth 오라클 + 5개 DeFi 어댑터 패턴 |
-
+| Dynamic yield strategies | AI 분배 라우팅 + **LP 옵티마이저** (큐레이션→라우팅→LP) |
+| Automated risk management | Voluntary redemption(홀더 영구 exit) + rank-tier supply |
+| Mantle RWA infrastructure | Pyth 오라클 + 5개 DeFi 어댑터 + AgentLogger 온체인 기록 |
 심사 라인업: Allora Network · Nansen · Z.ai · Animoca Brands · DoraHacks
 
 ---
 
-## 3. 데모 스크립트 (shot-by-shot)
+## 4. Shot-by-shot (Time · 화면 · 내레이션 · 노리는 점수)
 
-### 🎬 Shot 1 — Hook (0:00–0:20)
-- **화면:** 홈 `/` — "Pyth · live 30/30" 배지 클로즈업
-- **나레이션:**
-  > "주식 트레이더가 크립토로 넘어올 때, 아는 종목이 온체인에 없어요. Jion은 매일 거래량 top-10 주식을 자동 토큰화해서 Mantle DeFi 전역에 AI가 배치합니다. 지금 보시는 가격, 전부 Pyth 오라클 실시간이에요."
-- **액션:** 마우스로 "Pyth · live 30/30" 가리키기 → NVDA 가격 가리키며 "실제 NVIDIA 시세"
+### 🎬 0:00–0:12 — Hook
+- **화면:** 홈 `/` 풀샷 → "Pyth · live" 배지
+- **VO:** *"Every day, trillions trade in stocks. But when those traders come to crypto, the names they know aren't on-chain. Jion fixes that — automatically."*
+- **점수:** 문제 정의 · 실데이터 신뢰
 
-### 🎬 Shot 2 — 문제 + 큐레이션 (0:20–0:45)
-- **화면:** 마켓 탭 전환 NASDAQ → KRX → TSE
-- **나레이션:**
-  > "기존 합성주식은 사용자가 직접 종목을 골라야 하고 유동성이 흩어집니다. Jion은 '선택'이 아니라 '오늘의 트렌딩'을 줍니다. NASDAQ, 한국, 일본 — 세 시장 모두."
-- **액션:** 탭 넘기며 Samsung, Toyota 보여주기 (글로벌 어필)
+### 🎬 0:12–0:32 — Curate = 유동성 자석 (Ask Jion 자연어)
+- **화면:** 홈 **Ask Jion** 바에 `Show me today's hot stocks` 입력 → 응답 스트리밍 + 토큰 칩
+- **VO:** *"No manual listings. Every market open, Jion auto-tokenizes the day's top-ten most-traded stocks — the names with the most real demand right now. That's the key: by always listing what the market is already trading hardest, liquidity follows demand instead of fragmenting across stale, hand-picked tokens. All priced live by Pyth — and you just ask, in plain English."*
+- **점수:** **Innovation 25%**(자동 큐레이션 = 유동성 부트스트랩) · **AI Interaction 25%** · Ecosystem(Pyth)
+- **💡 강조 포인트:** "매일 거래량 1등 종목만 다시 올린다 → 수요가 가장 큰 자산에 유동성이 자연히 몰린다"를 또박또박. (심사위원 단골 질문 "새 토큰 유동성 어디서?" 선제 방어)
 
-### 🎬 Shot 3 — AI 라우팅 (핵심, 0:45–1:30)
-- **화면:** 토큰 카드 "Why this route →" 클릭 → `/route/mNVDA`
-- **나레이션:**
-  > "각 토큰을 어느 DeFi에 보낼지 AI가 결정합니다. mNVDA는 거래량 1위, 변동성 높음 → Fluxion 집중유동성 + Lendle 담보. 그리고 **왜** 그렇게 했는지 자연어로 설명합니다."
-- **액션:** Routing reasoning 박스 읽어주기 → 대안 비교 매트릭스 스크롤 → "블랙박스가 아니라 설명 가능한 AI"
+### 🎬 0:30–1:00 — Route (설명가능 AI)
+- **화면:** Ask Jion `Why did mNVDA route to Merchant Moe?` → `/route/mNVDA` → **reasoning 타이핑** + **점수 바 애니메이션**
+- **VO:** *"Then an AI router decides where each token performs best across Mantle DeFi — and explains why, live. mNVDA: rank one, deep liquidity — Merchant Moe wins on spread. You see the exact factors it weighed — volume, volatility, liquidity. Not a black box. An explainable agent."*
+- **점수:** **Technical Depth 30%** · AI Interaction · Innovation
 
-### 🎬 Shot 4 — Cross-DeFi + 인프라 컨셉 (1:30–2:00)
-- **화면:** `/performance` → `/integrate`
-- **나레이션:**
-  > "Jion은 거래소가 아닙니다. 토큰을 발행하고 분배만 해요. 외부 DeFi는 `IJionAdapter` 인터페이스 하나만 구현하면 새 RWA 토큰을 자동으로 받습니다. Mantle 생태계와 경쟁이 아니라 공급하는 인프라죠."
-- **액션:** `/integrate` 의 어댑터 코드 스니펫 가리키기
+### 🎬 1:00–1:20 — LP (자동화 3단계 완성, 유동성 회수)
+- **화면:** `/reasoning` 집계 뷰 (또는 Ask Jion `Where should I provide liquidity today?`)
+- **VO:** *"And it deepens that liquidity automatically. The same agent concentrates LP capital into the highest-demand names — allocating each day's seed by predicted volume, so depth pools where trading actually happens. Curate, route, and provide liquidity — one automated pipeline, every single day."*
+- **점수:** Innovation(서사 완성: 큐레이션→라우팅→**LP**) · 트랙 "dynamic yield"
 
-### 🎬 Shot 5 — 온체인 검증 (2:00–2:25)
-- **화면:** Mantle Sepolia Explorer (TokenFactory + AgentLogger)
-- **나레이션:**
-  > "모든 게 Mantle Sepolia에 실제 배포돼 있어요. 발행은 `TokenFactory`, 분배 결정은 `AgentLogger`가 온체인 이벤트로 기록 — 검증 가능한 에이전트입니다. 그리고 같은 ticker는 재발행 안 합니다. 이 한 줄이 유동성 분산을 막아요."
-- **액션:** explorer에서 컨트랙트 또는 `tokenOf("mNVDA")` 보여주기
+### 🎬 1:18–1:40 — On-chain verifiable agent ⭐ (머니샷)
+- **화면:** route 페이지 **"View this decision on-chain ↗"** → **Mantle Explorer** AgentLogger 로그탭, `AgentDecision` 이벤트(reason 텍스트 줌인)
+- **VO:** *"And every decision is written on-chain. This is the agent's actual routing log on Mantle — its reasoning, permanent and verifiable by anyone. Not in our database. On Mantle."*
+- **점수:** **Technical Depth 30%** · **Mantle Ecosystem 25%** · Allora/Z.ai 정조준
 
-### 🎬 Shot 6 — 비전 / 클로즈 (2:25–2:50)
-- **화면:** 홈으로 복귀
-- **나레이션:**
-  > "휴리스틱에서 시계열 학습으로, Mock 어댑터에서 실제 Mantle DeFi 통합으로. Jion은 TradFi와 DeFi를 잇는 RWA × AI 인프라입니다. 거래량이 죽어도 홀더는 언제든 오라클 시세로 환매 — 갇히지 않아요."
+### 🎬 1:40–1:55 — Infra-not-venue + 생태계
+- **화면:** `/integrate` 의 `IJionAdapter` 코드 스니펫
+- **VO:** *"Jion never runs a trading venue. It feeds tokens to Merchant Moe, Agni, Fluxion, Lendle — any protocol that implements one adapter interface. We don't compete with Mantle DeFi. We supply it."*
+- **점수:** **Mantle Ecosystem 25%** · Innovation(새 패러다임)
 
----
-
-## 4. 60초 티저 버전 (소셜 / 제출 썸네일용)
-
-1. (0:00–0:10) Hook — 홈 30/30 라이브 배지 + "오늘의 top-10 주식, 자동 토큰화"
-2. (0:10–0:30) `/route/mNVDA` — "AI가 어디로 분배할지 결정하고 이유를 설명"
-3. (0:30–0:45) `/integrate` + explorer — "외부 DeFi는 어댑터 1개로 통합, 온체인 검증"
-4. (0:45–0:60) 클로즈 — "TradFi × DeFi 브리지, Mantle RWA 인프라"
+### 🎬 1:55–2:00 — Close
+- **화면:** 홈 로고 + 한 줄 카피
+- **VO:** *"Jion. Today's trending stocks — auto-curated, AI-routed, logged on-chain. On Mantle."*
 
 ---
 
-## 5. 촬영 가이드
+## 5. 풀 보이스오버 (이어서 읽기용, ≈2:00)
+> Every day, trillions trade in stocks. But when those traders come to crypto, the names they know aren't on-chain. Jion fixes that — automatically. No manual listings: every market open, Jion auto-tokenizes the day's top-ten most-traded stocks — the names with the most real demand right now. That's the key: by always listing what the market is already trading hardest, liquidity follows demand instead of fragmenting across stale, hand-picked tokens. All priced live by Pyth — and you just ask, in plain English. Then an AI router decides where each token performs best across Mantle DeFi — and explains why, live. mNVDA: rank one, deep liquidity — Merchant Moe wins on spread. You see the exact factors it weighed — volume, volatility, liquidity. Not a black box — an explainable agent. And it deepens that liquidity automatically: the same agent concentrates LP capital into the highest-demand names by predicted volume, so depth pools where trading actually happens. Curate, route, and provide liquidity — one automated pipeline, every single day. And every decision is written on-chain. This is the agent's actual routing log on Mantle — its reasoning, permanent and verifiable by anyone. Not in our database. On Mantle. Jion never runs a trading venue; it feeds tokens to Merchant Moe, Agni, Fluxion, Lendle — any protocol that implements one adapter interface. We don't compete with Mantle DeFi — we supply it. Jion: today's trending stocks, auto-curated, AI-routed, logged on-chain. On Mantle.
 
-**기술 세팅**
-- 화면 녹화: QuickTime (Mac) 또는 OBS, 1080p+
-- 브라우저: 시크릿 창 + 확대 110~125% (글자 가독성)
-- 녹화 전 `bun run dev` 띄우고 **모든 페이지 한 번씩 미리 로드** (Next.js 첫 컴파일 지연 제거)
-- 마우스 커서 강조 켜기 (시선 유도)
-
-**페이싱**
-- 한 화면에 5초 이상 머물지 말기
-- 가격이 라이브로 바뀌는 순간 잡으면 임팩트 ↑ (60초 revalidate — 새로고침하면 변동)
-- 나레이션 미리 녹음 → 화면이랑 싱크
-
-**구조 (해커톤 황금률)**
-- 첫 15초에 "뭐 하는 건지" 명확히
-- 작동하는 제품 먼저, 코드/아키텍처 나중
-- 마지막에 비전 + 트랙 키워드 한 번 더
-
-**백업**
-- 라이브 시연 실패 대비 **녹화본 필수** (Pyth Hermes 503 가능성)
-- 녹화는 라이브 데이터 잘 나올 때 미리 떠두기
+## 6. 60초 티저 컷 (X 홍보 / Community Voting용)
+Hook(0:12) → Ask Jion 큐레이션(0:18) → mNVDA 라우팅+점수바(0:20) → 온체인 로그(0:10) → close. 자동화 서사 한 줄 + 머니샷만.
 
 ---
 
-## 6. ⚠️ 정직성 — 과장 금지 (심사위원이 코드/explorer 확인 가능)
+## 7. 촬영 가이드
+**세팅:** QuickTime/OBS 1080p+, 시크릿 창 확대 110~125%, 마우스 커서 강조 ON.
+**페이싱:** 한 화면 5초 이상 X. Ask Jion 입력은 **천천히** (스트리밍 타이핑 보여야 AI Interaction 점수). explorer 로그탭은 **reason 텍스트 보이게 줌인**(머니샷). 가격 라이브 변동 순간 잡으면 임팩트 ↑.
+**구조 황금률:** 첫 12초에 "뭐 하는 건지", 작동 제품 먼저·코드 나중, 마지막에 트랙 키워드.
+**백업:** 라이브 실패 대비 녹화본 필수 (Pyth 503 가능). 데이터 잘 나올 때 미리 떠두기.
 
+## 8. ⚠️ 정직성 — 과장 금지 (심사위원이 코드/explorer 확인 가능)
 | 하지 말 것 | 대신 이렇게 |
 |---|---|
-| "매일 자동으로 cron 돌아감" | "발행/분배 인프라 배포됨, ops가 트리거" (자동 스케줄 아직 X) |
-| "거래량도 실시간" | "가격은 Pyth 라이브, 거래량/랭킹은 데모 fixture" (Polygon 키 없음) |
-| "redeem 지금 작동" | "redeem 컨트랙트 함수 설계됨, 홀더 UI는 Phase 2+" (함수 미배포) |
-| "외부 DeFi 실제 통합됨" | "Mock 어댑터로 패턴 증명, 실 통합 Phase 2+" (UI에 "Mock" 라벨 명시) |
+| "매일 자동 cron 돌아감" | "발행/분배 인프라 배포됨, ops가 트리거" (자동 스케줄 아직 X) |
+| "거래량도 실시간" | "가격은 Pyth 라이브, 랭킹/볼륨은 데모 fixture" (Polygon 키 시) |
+| "에이전트가 매 결정 자동 기록" | "결정을 온체인 emit, 데모는 **시드 스크립트로 실제 기록**, 풀 자동 파이프라인은 Phase 2+" |
+| "외부 DeFi 실 통합" | "Mock 어댑터로 패턴 증명, 실 통합 Phase 2+" (UI "Mock" 라벨 명시) |
 
 → **"지금 작동 + 명확한 로드맵"** 이 **"다 됐다고 거짓말"** 보다 훨씬 강함.
 
----
-
-## 7. 데모 페이지 빠른 참조
-
+## 9. 데모 페이지 / 컨트랙트 빠른 참조
 | URL | 화면 | 데이터 |
 |---|---|---|
-| `/` | Trending (T1) | Pyth 라이브 가격 + mock 랭킹/볼륨 |
-| `/route/mNVDA` | AI 라우팅 상세 (T2) | 라이브 가격 + LLM reasoning |
-| `/route/m7203` | Toyota (TSE) | 일본 Pyth 피드 |
-| `/route/m005930` | Samsung (KRX) | 한국 Pyth 피드 |
-| `/reasoning` | 전 토큰 라우팅 종합 | mock 라우팅 텍스트 |
-| `/performance` | Cross-DeFi (T3) | mock TVL/Volume |
-| `/integrate` | 개발자 통합 (T7) | static 가이드 |
+| `/` | Trending + **Ask Jion** | Pyth 라이브 가격 + mock 랭킹 |
+| `/route/mNVDA` | AI 라우팅 상세 (타이핑 reasoning + 점수바 + 온체인 링크) | 라이브 가격 + LLM |
+| `/route/m7203` · `/route/m005930` | Toyota(TSE) · Samsung(KRX) | 일본·한국 Pyth |
+| `/reasoning` | 전 토큰 라우팅 종합 | mock 라우팅 |
+| `/performance` | Cross-DeFi | mock TVL/Vol |
+| `/integrate` | 개발자 통합 (어댑터) | static |
 | `/feed` | Oracle 라이브 피드 | Pyth |
 
-**배포 컨트랙트 (Mantle Sepolia, chain 5003):**
-- TokenFactory · Distributor · Settlement · OracleAdapter · AgentLogger
-- SelfPoolAdapter + MerchantMoeMockAdapter + LendleMockAdapter · MockUSDC
-- 주소: `packages/types/src/addresses.ts` / explorer: https://explorer.sepolia.mantle.xyz
+**배포 컨트랙트 (Mantle Sepolia, chain 5003):** TokenFactory · Distributor · Settlement · OracleAdapter · **AgentLogger** · SelfPoolAdapter · MerchantMoe/Lendle Mock · MockUSDC — 주소 `packages/types/src/addresses.ts` · explorer https://explorer.sepolia.mantle.xyz

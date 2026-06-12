@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Jion — Demo Teleprompter (2:00)</title>
+<style>
+  :root { --brand:#9b8afb; --bg:#0a0a0b; --cue:#7c5cfc; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:#f4f4f5;
+    font-family:-apple-system,system-ui,"Segoe UI",Roboto,sans-serif; }
+  body { display:flex; flex-direction:column; }
+
+  /* top bar */
+  .bar { display:flex; align-items:center; gap:14px; padding:12px 18px;
+    border-bottom:1px solid #27272a; background:#101012; flex:0 0 auto; }
+  .bar h1 { font-size:14px; font-weight:600; margin:0; color:#a1a1aa; }
+  .timer { font-variant-numeric:tabular-nums; font-size:22px; font-weight:700;
+    letter-spacing:.5px; margin-left:auto; }
+  .timer.warn { color:#fbbf24; } .timer.over { color:#f43f5e; }
+  button { background:#1c1c20; color:#e4e4e7; border:1px solid #2f2f35;
+    border-radius:9px; padding:8px 14px; font-size:14px; cursor:pointer; }
+  button:hover { border-color:var(--brand); }
+  button.primary { background:#6d3ef0; border-color:#6d3ef0; color:#fff; }
+  .hint { font-size:11px; color:#71717a; }
+
+  /* reader */
+  .stage { position:relative; flex:1 1 auto; overflow:hidden; }
+  .scroll { position:absolute; inset:0; overflow-y:auto; scroll-behavior:auto;
+    padding:46vh 8vw; }
+  .scroll::-webkit-scrollbar { width:0; }
+  .seg { margin:0 0 0.7em; }
+  .cue { display:inline-block; font-size:clamp(13px,1.5vw,18px); font-weight:600;
+    color:#0a0a0b; background:var(--brand); border-radius:8px;
+    padding:3px 12px; margin-bottom:.35em; }
+  .vo { font-size:clamp(28px,4.6vw,56px); line-height:1.32; font-weight:600;
+    color:#fafafa; }
+  .seg.done .vo { color:#52525b; }            /* passed segments dim */
+  .center-line { position:absolute; top:46vh; left:0; right:0; height:2px;
+    background:linear-gradient(90deg,transparent,rgba(155,138,251,.5),transparent);
+    pointer-events:none; }
+  .mirror .scroll { transform:scaleX(-1); }     /* teleprompter glass */
+</style>
+</head>
+<body>
+  <div class="bar">
+    <h1>Jion · Demo Teleprompter</h1>
+    <button class="primary" id="play">▶ Start</button>
+    <button id="reset">↻ Reset</button>
+    <button id="slower">– slow</button>
+    <button id="faster">+ fast</button>
+    <button id="big">A+</button>
+    <button id="small">A–</button>
+    <button id="mirror">⇋ Mirror</button>
+    <span class="hint">Space=play/pause · R=reset · ↑↓=size</span>
+    <span class="timer" id="timer">0:00 / 2:00</span>
+  </div>
+
+  <div class="stage">
+    <div class="center-line"></div>
+    <div class="scroll" id="scroll"></div>
+  </div>
+
+<script>
+// Total target duration (seconds). Scroll auto-syncs to this so you finish at 2:00.
+let DURATION = 120;
+
+// VO segments with screen cues (timestamps approximate — for your guidance).
+const SCRIPT = [
+  { t:"0:00 · Home / Pyth live badge",
+    vo:"Every day, trillions trade in stocks. But when those traders come to crypto, the names they know aren't on-chain. Jion fixes that — automatically." },
+  { t:'0:12 · Ask Jion → type "Show me today’s hot stocks"',
+    vo:"No manual listings. Every market open, Jion auto-tokenizes the day's top-ten most-traded stocks — the names with the most real demand right now. That's the key: by always listing what the market is already trading hardest, liquidity follows demand instead of fragmenting across stale, hand-picked tokens. All priced live by Pyth — and you just ask, in plain English." },
+  { t:'0:32 · Ask Jion → "Why did mNVDA route to Merchant Moe?" → /route/mNVDA',
+    vo:"Then an AI router decides where each token performs best across Mantle DeFi — and explains why, live. mNVDA: rank one, deep liquidity — Merchant Moe wins on spread. You see the exact factors it weighed — volume, volatility, liquidity. Not a black box — an explainable agent." },
+  { t:"1:00 · /reasoning (LP allocation)",
+    vo:"And it deepens that liquidity automatically: the same agent concentrates LP capital into the highest-demand names by predicted volume, so depth pools where trading actually happens. Curate, route, and provide liquidity — one automated pipeline, every single day." },
+  { t:'1:20 · click "View this decision on-chain ↗" → Mantle Explorer logs',
+    vo:"And every decision is written on-chain. This is the agent's actual routing log on Mantle — its reasoning, permanent and verifiable by anyone. Not in our database. On Mantle." },
+  { t:"1:40 · /integrate — IJionAdapter snippet",
+    vo:"Jion never runs a trading venue; it feeds tokens to Merchant Moe, Agni, Fluxion, Lendle — any protocol that implements one adapter interface. We don't compete with Mantle DeFi — we supply it." },
+  { t:"1:55 · Home / logo",
+    vo:"Jion: today's trending stocks, auto-curated, AI-routed, logged on-chain. On Mantle." },
+];
+
+const scroll = document.getElementById('scroll');
+const timerEl = document.getElementById('timer');
+const playBtn = document.getElementById('play');
+let fontScale = 1;
+
+function render(){
+  scroll.innerHTML = SCRIPT.map((s,i)=>
+    `<div class="seg" data-i="${i}"><span class="cue">${s.t}</span>`
+    + `<div class="vo">${s.vo}</div></div>`).join('');
+}
+render();
+
+let playing=false, startTs=0, elapsed=0, raf=0;
+
+function fmt(sec){ sec=Math.max(0,Math.floor(sec)); return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); }
+
+function frame(now){
+  if(!playing) return;
+  if(!startTs) startTs = now - elapsed*1000;
+  elapsed = (now - startTs)/1000;
+  const max = scroll.scrollHeight - scroll.clientHeight;
+  const p = Math.min(1, elapsed/DURATION);
+  scroll.scrollTop = p*max;
+
+  timerEl.textContent = fmt(elapsed)+' / '+fmt(DURATION);
+  timerEl.className = 'timer'+(elapsed>=DURATION?' over':elapsed>=DURATION-15?' warn':'');
+
+  // dim segments whose VO has scrolled above the center line
+  const mid = scroll.scrollTop + scroll.clientHeight*0.46;
+  [...scroll.children].forEach(el=>{
+    el.classList.toggle('done', el.offsetTop + el.offsetHeight < mid);
+  });
+
+  if(elapsed>=DURATION){ playing=false; playBtn.textContent='▶ Start'; return; }
+  raf = requestAnimationFrame(frame);
+}
+
+function play(){ playing=true; startTs=0; playBtn.textContent='⏸ Pause'; raf=requestAnimationFrame(frame); }
+function pause(){ playing=false; playBtn.textContent='▶ Start'; cancelAnimationFrame(raf); }
+function reset(){ pause(); elapsed=0; scroll.scrollTop=0; timerEl.textContent='0:00 / '+fmt(DURATION); timerEl.className='timer'; [...scroll.children].forEach(el=>el.classList.remove('done')); }
+
+playBtn.onclick = ()=> playing?pause():play();
+document.getElementById('reset').onclick = reset;
+document.getElementById('slower').onclick = ()=>{ DURATION+=10; if(!playing) timerEl.textContent='0:00 / '+fmt(DURATION); };
+document.getElementById('faster').onclick = ()=>{ DURATION=Math.max(30,DURATION-10); if(!playing) timerEl.textContent='0:00 / '+fmt(DURATION); };
+function setFont(d){ fontScale=Math.max(.6,Math.min(2,fontScale+d)); scroll.style.fontSize=(fontScale*100)+'%'; }
+document.getElementById('big').onclick = ()=>setFont(.1);
+document.getElementById('small').onclick = ()=>setFont(-.1);
+document.getElementById('mirror').onclick = ()=> document.body.classList.toggle('mirror');
+
+document.addEventListener('keydown', e=>{
+  if(e.code==='Space'){ e.preventDefault(); playing?pause():play(); }
+  else if(e.key==='r'||e.key==='R'){ reset(); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); setFont(.1); }
+  else if(e.key==='ArrowDown'){ e.preventDefault(); setFont(-.1); }
+});
+</script>
+</body>
+</html>
